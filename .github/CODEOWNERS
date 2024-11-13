@@ -1,0 +1,4 @@
+# Only authorized users can change workflows and packaging
+.github @slovensko-digital/autogram-release-team
+/pom.xml @slovensko-digital/autogram-release-team
+/src/main/resources/digital/slovensko/autogram/core/validation/lotlKeyStore.p12 @slovensko-digital/autogram-release-team
