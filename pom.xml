@@ -183,9 +183,6 @@
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.3.0</version>
-                    <configuration>
-                        <jvm>${jlink.jdk.path}${file.separator}bin${file.separator}java</jvm>
-                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -208,24 +205,6 @@
                 <artifactId>mvn-jlink-wrapper</artifactId>
                 <version>1.2.0</version>
                 <executions>
-                    <execution>
-                        <id>cache-jdk-17</id>
-                        <goals>
-                            <goal>cache-jdk</goal>
-                        </goals>
-                        <configuration>
-                            <jdkPathProperty>jlink.jdk.path</jdkPathProperty>
-                            <jdkCachePath>${project.build.directory}${file.separator}jdkCache</jdkCachePath>
-                            <authorization>${github.auth}</authorization>
-                            <provider>BELLSOFT</provider>
-                            <providerConfig>
-                                <type>jdk</type>
-                                <version>17.0.7+7</version>
-                                <arch>amd64-full</arch>
-                            </providerConfig>
-                        </configuration>
-                    </execution>
-
                     <execution>
                         <id>call-jdeps</id>
                         <goals>
@@ -258,9 +237,6 @@
                         </goals>
                         <configuration>
                             <output>${project.build.directory}${file.separator}preparedJDK</output>
-                            <modulePaths>
-                                <path>${jlink.jdk.path}${file.separator}jmods</path>
-                            </modulePaths>
                             <addModules>
                                 <module>java.compiler</module>
                                 <module>java.base</module>
