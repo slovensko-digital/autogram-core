@@ -31,7 +31,9 @@ jobs:
           cache: maven
 
       - name: Run tests
-        run: mvn test
+        run: mvn test -P system-jdk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: JaCoCo Code Coverage Report
         id: jacoco_report
