@@ -22,8 +22,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ github.token }}
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -35,25 +33,26 @@ jobs:
       - name: Run tests
         run: mvn test -P system-jdk
 
-      - name: JaCoCo Code Coverage Report
-        id: jacoco_report
-        uses: PavanMudigonda/jacoco-reporter@ffe0b95c14292be4d076e56d50ba6c3b94c43a77
-        with:
-          coverage_results_path: ${{ github.workspace }}/target/site/jacoco/jacoco.xml
-          coverage_report_name: Coverage
-          coverage_report_title: JaCoCo
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          skip_check_run: true
-          minimum_coverage: 80
-          fail_below_threshold: false # set to true for Github CI build failing when coverage check do not pass
-          publish_only_summary: false
-
-      - name: Add Coverage Job Summary
-        run: echo "${{ steps.jacoco_report.outputs.coverageSummary }}" >> $GITHUB_STEP_SUMMARY
-
-      - name: Upload Code Coverage Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: code-coverage-report-markdown
-          path: ./*/coverage-results.md
-          retention-days: 1
+# TODO: make this work
+#      - name: JaCoCo Code Coverage Report
+#        id: jacoco_report
+#        uses: PavanMudigonda/jacoco-reporter@ffe0b95c14292be4d076e56d50ba6c3b94c43a77
+#        with:
+#          coverage_results_path: ${{ github.workspace }}/target/site/jacoco/jacoco.xml
+#          coverage_report_name: Coverage
+#          coverage_report_title: JaCoCo
+#          github_token: ${{ secrets.GITHUB_TOKEN }}
+#          skip_check_run: true
+#          minimum_coverage: 80
+#          fail_below_threshold: false # set to true for Github CI build failing when coverage check do not pass
+#          publish_only_summary: false
+#
+#      - name: Add Coverage Job Summary
+#        run: echo "${{ steps.jacoco_report.outputs.coverageSummary }}" >> $GITHUB_STEP_SUMMARY
+#
+#      - name: Upload Code Coverage Artifacts
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: code-coverage-report-markdown
+#          path: ./*/coverage-results.md
+#          retention-days: 1
