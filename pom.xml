@@ -18,21 +18,6 @@
         </license>
     </licenses>
 
-    <developers>
-        <developer>
-            <name>Marek Celuch</name>
-            <email>marek.celuch@slovensko.digital</email>
-            <organization>Slovensko.Digital</organization>
-            <organizationUrl>https://github.com/slovensko-digital</organizationUrl>
-        </developer>
-        <developer>
-            <name>Jan Suchal</name>
-            <email>jan.suchal@slovensko.digital</email>
-            <organization>Slovensko.Digital</organization>
-            <organizationUrl>https://github.com/slovensko-digital</organizationUrl>
-        </developer>
-    </developers>
-
     <scm>
         <connection>scm:git:git://github.com/slovensko-digital/autogram-core.git</connection>
         <developerConnection>scm:git:ssh://github.com:slovensko-digital/autogram-core.git</developerConnection>
@@ -46,6 +31,7 @@
         <gson.version>2.11.0</gson.version>
         <junit.version>5.10.2</junit.version>
         <slf4j.version>2.0.13</slf4j.version>
+        <skip-jdk-cache>false</skip-jdk-cache>
     </properties>
 
     <dependencyManagement>
@@ -183,6 +169,9 @@
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.3.0</version>
+                    <configuration>
+                        <jvm>${jlink.jdk.path}${file.separator}bin${file.separator}java</jvm>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -192,6 +181,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
+                    <executable>${jlink.jdk.path}${file.separator}bin${file.separator}javac</executable>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
                     <compilerArgs>
@@ -203,30 +193,24 @@
             <plugin>
                 <groupId>com.igormaznitsa</groupId>
                 <artifactId>mvn-jlink-wrapper</artifactId>
-                <version>1.2.0</version>
+                <version>1.2.4</version>
                 <executions>
                     <execution>
-                        <id>call-jdeps</id>
+                        <id>cache-jdk-17</id>
                         <goals>
-                            <goal>jdeps</goal>
+                            <goal>cache-jdk</goal>
                         </goals>
                         <configuration>
-                            <!-- The output of jdeps is currently not used anywhere, modules are
-                            defined manually -->
-                            <skip>true</skip>
-                            <output>${project.build.directory}${file.separator}jdeps.out</output>
-                            <options>
-                                <option>--class-path</option>
-                                <option>./target/dependency-jars/*</option>
-                                <option>-R</option>
-                                <option>--multi-release</option>
-                                <option>${java.version}</option>
-                                <option>-f</option>
-                                <option>.*jar</option>
-                                <option>
-                                    ${project.build.directory}${file.separator}${project.build.finalName}.jar
-                                </option>
-                            </options>
+                            <skip>${skip-jdk-cache}</skip>
+                            <jdkPathProperty>jlink.jdk.path</jdkPathProperty>
+                            <jdkCachePath>${project.build.directory}${file.separator}jdkCache</jdkCachePath>
+                            <authorization>${github.auth}</authorization>
+                            <provider>BELLSOFT</provider>
+                            <providerConfig>
+                                <type>jdk</type>
+                                <version>17.0.7+7</version>
+                                <arch>amd64-full</arch>
+                            </providerConfig>
                         </configuration>
                     </execution>
 
@@ -237,6 +221,9 @@
                         </goals>
                         <configuration>
                             <output>${project.build.directory}${file.separator}preparedJDK</output>
+                            <modulePaths>
+                                <path>${jlink.jdk.path}${file.separator}jmods</path>
+                            </modulePaths>
                             <addModules>
                                 <module>java.compiler</module>
                                 <module>java.base</module>
@@ -262,6 +249,14 @@
         </plugins>
     </build>
     <profiles>
+        <profile>
+            <id>system-jdk</id>
+            <properties>
+                <jlink.jdk.path>${env.JAVA_HOME}</jlink.jdk.path>
+                <skip-jdk-cache>true</skip-jdk-cache>
+            </properties>
+        </profile>
+
         <profile>
             <id>run-its</id>
             <build>
