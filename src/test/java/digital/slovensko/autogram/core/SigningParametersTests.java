@@ -144,15 +144,13 @@ public class SigningParametersTests {
 
     @ParameterizedTest
     @MethodSource("digital.slovensko.autogram.core.TestMethodSources#nonEFormXmlProvider")
-    void testThrowsUnknownEformExceptionWithInvalidXmlEform(DSSDocument document) {
+    void testThrowsXMLValidationExceptionWithInvalidXmlEform(DSSDocument document) {
         // TODO: mock eform S3 resource
-        var signingParameters = SigningParameters.buildParameters(SignatureLevel.XAdES_BASELINE_B, null, null, null,
+        Assertions.assertThrows(XMLValidationException.class,
+                () -> SigningParameters.buildParameters(SignatureLevel.XAdES_BASELINE_B, null, null, null,
                         false, null, null, null, null, true,
-                        null, false, 800, document);
-
-        Assertions.assertTrue(signingParameters.isPlainXml());
+                        null, false, 800, document));
     }
-
 
     @ParameterizedTest
     @MethodSource("digital.slovensko.autogram.core.TestMethodSources#xsdSchemaFailedValidationXmlProvider")
@@ -241,7 +239,7 @@ public class SigningParametersTests {
     }
 
     @ParameterizedTest
-    @MethodSource("digital.slovensko.autogram.TestMethodSources#orsrDocumentsProvider")
+    @MethodSource("digital.slovensko.autogram.core.TestMethodSources#orsrDocumentsProvider")
     void testDoesNotThrowWithEmbeddedXdcWithoutAutoLoad(DSSDocument document) {
         var eFormAttributes = new EFormAttributes(identifier, "", "", "http://data.gov.sk/def/container/xmldatacontainer+xml/1.1", null, null, true);
 
