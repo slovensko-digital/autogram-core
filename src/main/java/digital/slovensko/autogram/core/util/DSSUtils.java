@@ -15,16 +15,18 @@ import eu.europa.esig.dss.model.DSSDocument;
 import eu.europa.esig.dss.pades.signature.PAdESService;
 import eu.europa.esig.dss.pades.validation.PDFDocumentValidatorFactory;
 import eu.europa.esig.dss.signature.AbstractSignatureService;
-import eu.europa.esig.dss.validation.CertificateVerifier;
+import eu.europa.esig.dss.spi.validation.CertificateVerifier;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
 import eu.europa.esig.dss.xades.signature.XAdESService;
 import eu.europa.esig.dss.xades.validation.XMLDocumentValidatorFactory;
-import sun.security.x509.X509CertImpl;
+import java.security.cert.X509Certificate;
 
 import javax.naming.InvalidNameException;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
+import java.io.ByteArrayInputStream;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.util.Base64;
 
 public class DSSUtils {
@@ -41,10 +43,12 @@ public class DSSUtils {
         }
         return null;
     }
-
     public static CertificateToken parseCertificate(String certString) {
         try {
-            return new CertificateToken(new X509CertImpl(Base64.getDecoder().decode(certString)));
+            var certificateFactory = CertificateFactory.getInstance("X.509");
+            var certBytes = Base64.getDecoder().decode(certString);
+            X509Certificate cert = (X509Certificate) certificateFactory.generateCertificate(new ByteArrayInputStream(certBytes));
+            return new CertificateToken(cert);
         } catch (CertificateException e) {
             throw new UnrecognizedException(e); // TODO: custom exception
         }

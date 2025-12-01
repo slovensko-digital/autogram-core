@@ -39,7 +39,6 @@ import eu.europa.esig.dss.model.DSSException;
 import eu.europa.esig.dss.service.http.commons.CommonsDataLoader;
 import eu.europa.esig.dss.service.http.commons.FileCacheDataLoader;
 import eu.europa.esig.dss.spi.DSSUtils;
-import eu.europa.esig.dss.xades.DSSXMLUtils;
 
 public abstract class EFormUtils {
     private static final Charset ENCODING = StandardCharsets.UTF_8;

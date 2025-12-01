@@ -1,16 +1,16 @@
 package digital.slovensko.autogram.core.server.dto;
 
 import digital.slovensko.autogram.core.errors.DocumentNotSignedYetException;
-import eu.europa.esig.dss.asic.cades.ASiCWithCAdESContainerExtractor;
-import eu.europa.esig.dss.asic.common.AbstractASiCContainerExtractor;
-import eu.europa.esig.dss.asic.xades.ASiCWithXAdESContainerExtractor;
+import eu.europa.esig.dss.asic.cades.extract.ASiCWithCAdESContainerExtractor;
+import eu.europa.esig.dss.asic.common.extract.ASiCContainerExtractor;
+import eu.europa.esig.dss.asic.xades.extract.ASiCWithXAdESContainerExtractor;
 import eu.europa.esig.dss.diagnostic.DiagnosticData;
 import eu.europa.esig.dss.diagnostic.SignerDataWrapper;
 import eu.europa.esig.dss.enumerations.MimeTypeEnum;
 import eu.europa.esig.dss.enumerations.TimestampQualification;
 import eu.europa.esig.dss.model.DSSDocument;
 import eu.europa.esig.dss.simplereport.SimpleReport;
-import eu.europa.esig.dss.validation.AdvancedSignature;
+import eu.europa.esig.dss.spi.signature.AdvancedSignature;
 import eu.europa.esig.dss.validation.DocumentValidator;
 import eu.europa.esig.dss.validation.reports.Reports;
 
@@ -38,7 +38,7 @@ public record ValidationResponseBody(String containerType, String signatureForm,
 
         List<SignedObject> signedObjects = null;
         List<UnsignedObject> unsignedObjects = null;
-        AbstractASiCContainerExtractor extractor = null;
+        ASiCContainerExtractor extractor = null;
 
         var signatureForm = simpleReport.getSignatureFormat(simpleReport.getFirstSignatureId()).getSignatureForm();
         String signatureFormString = null;

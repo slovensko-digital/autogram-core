@@ -1,6 +1,6 @@
 package digital.slovensko.autogram.core;
 
-import eu.europa.esig.dss.spi.tsl.TLInfo;
+import eu.europa.esig.dss.model.tsl.TLInfo;
 import eu.europa.esig.dss.tsl.sync.ExpirationAndSignatureCheckStrategy;
 
 import java.util.Date;
