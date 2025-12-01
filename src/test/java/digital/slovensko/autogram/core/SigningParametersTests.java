@@ -8,7 +8,6 @@ import eu.europa.esig.dss.enumerations.SignatureLevel;
 import eu.europa.esig.dss.enumerations.SignaturePackaging;
 import eu.europa.esig.dss.model.DSSDocument;
 import eu.europa.esig.dss.model.InMemoryDocument;
-import eu.europa.esig.dss.spi.x509.tsp.TSPSource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -31,7 +30,6 @@ public class SigningParametersTests {
     private String xsdSchema;
     private String xsltTransformation;
     private String identifier;
-    private TSPSource tspSource;
     private EFormAttributes attributes;
 
     @BeforeAll
@@ -46,7 +44,6 @@ public class SigningParametersTests {
         xsltTransformation = new String(
                 this.getClass().getResourceAsStream("general_agenda.xslt").readAllBytes(), StandardCharsets.UTF_8);
         identifier = "http://data.gov.sk/doc/eform/App.GeneralAgenda/1.9";
-        tspSource = null;
 
         attributes = new EFormAttributes("id1/asa", null, null, xdcXmlns, null, null, false);
     }
@@ -83,7 +80,7 @@ public class SigningParametersTests {
 
         Assertions.assertThrows(SigningParametersException.class,
                 () -> SigningParameters.buildParameters(null, null, asice, enveloping,
-                        false, inclusive, inclusive, inclusive, attributes, false, null, false, 800, null));
+                        false, inclusive, inclusive, inclusive, attributes, false, null, false, 800, document));
     }
 
     @ParameterizedTest
