@@ -93,7 +93,7 @@ public record ValidationResponseBody(String containerType, String signatureForm,
                     r.get(0).getMimeType().getMimeTypeString(),
                     signedObject.getReferencedName()
             );
-        }).toList();
+        }).filter(obj -> obj != null).toList();
     }
 
     private static List<UnsignedObject> getUnsignedObjects(List<DSSDocument> docs, List<SignerDataWrapper> signedObjects) {
