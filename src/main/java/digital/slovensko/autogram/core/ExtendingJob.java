@@ -7,7 +7,7 @@ import digital.slovensko.autogram.core.errors.UnrecognizedException;
 import digital.slovensko.autogram.core.errors.UnsupportedSignatureLevelException;
 import digital.slovensko.autogram.core.util.DSSUtils;
 import digital.slovensko.autogram.core.validation.SignatureValidator;
-import eu.europa.esig.dss.AbstractSignatureParameters;
+import eu.europa.esig.dss.signature.AbstractSignatureParameters;
 import eu.europa.esig.dss.asic.cades.ASiCWithCAdESSignatureParameters;
 import eu.europa.esig.dss.asic.xades.ASiCWithXAdESSignatureParameters;
 import eu.europa.esig.dss.cades.CAdESSignatureParameters;

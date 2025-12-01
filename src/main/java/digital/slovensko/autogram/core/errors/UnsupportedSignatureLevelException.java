@@ -1,7 +1,5 @@
 package digital.slovensko.autogram.core.errors;
 
-import digital.slovensko.autogram.core.errors.AutogramException;
-
 public class UnsupportedSignatureLevelException extends AutogramException {
     public UnsupportedSignatureLevelException(String signatureLevel) {
         super("Unsupported signature level", "Signature level " + signatureLevel + " is not supported",

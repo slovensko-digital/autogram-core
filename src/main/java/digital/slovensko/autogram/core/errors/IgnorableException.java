@@ -1,7 +1,6 @@
 package digital.slovensko.autogram.core.errors;
 
 import digital.slovensko.autogram.core.SigningJob;
-import digital.slovensko.autogram.core.errors.AutogramException;
 
 public class IgnorableException extends AutogramException {
     private final SigningJob job;

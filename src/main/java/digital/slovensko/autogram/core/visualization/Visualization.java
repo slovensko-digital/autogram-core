@@ -12,7 +12,7 @@ public abstract class Visualization {
         this.job = job;
     }
 
-    public abstract void initialize(Visualizer visualizer) throws IOException;
+    public void initialize(Visualizer visualizer) throws IOException {};
 
     public abstract DSSDocument getDocument();
 

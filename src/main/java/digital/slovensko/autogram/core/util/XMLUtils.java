@@ -21,10 +21,8 @@ public abstract class XMLUtils {
     }
 
     public static TransformerFactory getSecureTransformerFactory() throws TransformerConfigurationException {
-        var transformerFactory = TransformerFactory.newInstance();
+        TransformerFactory transformerFactory = new net.sf.saxon.TransformerFactoryImpl();
         transformerFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-        transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-        transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
 
         return transformerFactory;
     }
