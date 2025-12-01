@@ -31,7 +31,7 @@
         <gson.version>2.11.0</gson.version>
         <junit.version>5.10.2</junit.version>
         <slf4j.version>2.0.13</slf4j.version>
-        <skip-jdk-cache>false</skip-jdk-cache>
+        <jlink.jdk.path>${env.JAVA_HOME}</jlink.jdk.path>
     </properties>
 
     <dependencyManagement>
@@ -110,7 +110,6 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
-            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -154,7 +153,6 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -196,25 +194,6 @@
                 <version>1.2.4</version>
                 <executions>
                     <execution>
-                        <id>cache-jdk-17</id>
-                        <goals>
-                            <goal>cache-jdk</goal>
-                        </goals>
-                        <configuration>
-                            <skip>${skip-jdk-cache}</skip>
-                            <jdkPathProperty>jlink.jdk.path</jdkPathProperty>
-                            <jdkCachePath>${project.build.directory}${file.separator}jdkCache</jdkCachePath>
-                            <authorization>${github.auth}</authorization>
-                            <provider>BELLSOFT</provider>
-                            <providerConfig>
-                                <type>jdk</type>
-                                <version>17.0.7+7</version>
-                                <arch>amd64-full</arch>
-                            </providerConfig>
-                        </configuration>
-                    </execution>
-
-                    <execution>
                         <id>call-jlink</id>
                         <goals>
                             <goal>jlink</goal>
@@ -248,51 +227,4 @@
             </plugin>
         </plugins>
     </build>
-    <profiles>
-        <profile>
-            <id>system-jdk</id>
-            <properties>
-                <jlink.jdk.path>${env.JAVA_HOME}</jlink.jdk.path>
-                <skip-jdk-cache>true</skip-jdk-cache>
-            </properties>
-        </profile>
-
-        <profile>
-            <id>run-its</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-invoker-plugin</artifactId>
-                        <version>3.8.1</version>
-                        <configuration>
-                            <debug>true</debug>
-                            <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
-                            <pomIncludes>
-                                <pomInclude>*/pom.xml</pomInclude>
-                            </pomIncludes>
-                            <postBuildHookScript>verify</postBuildHookScript>
-                            <localRepositoryPath>${project.build.directory}/local-repo</localRepositoryPath>
-                            <settingsFile>src/it/settings.xml</settingsFile>
-                            <goals>
-                                <goal>clean</goal>
-                                <goal>test-compile</goal>
-                            </goals>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>integration-test</id>
-                                <goals>
-                                    <goal>install</goal>
-                                    <goal>integration-test</goal>
-                                    <goal>verify</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-
-            </build>
-        </profile>
-    </profiles>
 </project>
