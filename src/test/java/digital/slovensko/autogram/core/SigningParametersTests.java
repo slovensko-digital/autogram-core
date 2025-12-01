@@ -240,4 +240,13 @@ public class SigningParametersTests {
                         xdcXmlns, null, null, false), false, null, false, 800, document));
     }
 
+    @ParameterizedTest
+    @MethodSource("digital.slovensko.autogram.TestMethodSources#orsrDocumentsProvider")
+    void testDoesNotThrowWithEmbeddedXdcWithoutAutoLoad(DSSDocument document) {
+        var eFormAttributes = new EFormAttributes(identifier, "", "", "http://data.gov.sk/def/container/xmldatacontainer+xml/1.1", null, null, true);
+
+        Assertions.assertDoesNotThrow(
+                () -> SigningParameters.buildParameters(SignatureLevel.XAdES_BASELINE_B, null, asice, enveloping,
+                        false, inclusive, inclusive, inclusive, eFormAttributes, false, null, false, 800, document));
+    }
 }
