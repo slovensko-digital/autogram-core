@@ -1,5 +1,6 @@
 package digital.slovensko.autogram.core.validation;
 
+import digital.slovensko.autogram.core.CustomSynchronizationStrategy;
 import digital.slovensko.autogram.core.SigningJob;
 import digital.slovensko.autogram.core.util.XMLUtils;
 import eu.europa.esig.dss.enumerations.SignatureLevel;
@@ -17,7 +18,6 @@ import eu.europa.esig.dss.tsl.function.OfficialJournalSchemeInformationURI;
 import eu.europa.esig.dss.tsl.function.TLPredicateFactory;
 import eu.europa.esig.dss.tsl.job.TLValidationJob;
 import eu.europa.esig.dss.tsl.source.LOTLSource;
-import eu.europa.esig.dss.tsl.sync.ExpirationAndSignatureCheckStrategy;
 import eu.europa.esig.dss.validation.CertificateVerifier;
 import eu.europa.esig.dss.validation.CommonCertificateVerifier;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
@@ -121,7 +121,7 @@ public class SignatureValidator {
         var trustedListCertificateSource = new TrustedListsCertificateSource();
         validationJob.setTrustedListCertificateSource(trustedListCertificateSource);
         validationJob.setListOfTrustedListSources(lotlSource);
-        validationJob.setSynchronizationStrategy(new ExpirationAndSignatureCheckStrategy());
+        validationJob.setSynchronizationStrategy(new CustomSynchronizationStrategy());
         validationJob.setExecutorService(executorService);
         validationJob.setDebug(false);
 
