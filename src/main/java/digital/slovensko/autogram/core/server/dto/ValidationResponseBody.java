@@ -129,7 +129,8 @@ public record ValidationResponseBody(String containerType, String signatureForm,
                         diagnosticData.getTimestampType(timestampId).name(),
                         timestampCertificate.getSubjectX500Principal().getName(X500Principal.RFC1779),
                         new String(Base64.getEncoder().encode(getEncodedCertificateOrNull(timestampCertificate))),
-                        format.format(timestamp.getGenerationTime())
+                        format.format(timestamp.getGenerationTime()),
+                        format.format(timestampCertificate.getNotAfter())
                 );
             }).toList();
 
@@ -142,8 +143,8 @@ public record ValidationResponseBody(String containerType, String signatureForm,
                             simpleReport.getSignatureQualification(signatureId).name(),
                             certificate.getIssuerX500Principal().getName(X500Principal.RFC1779),
                             certificate.getSubjectX500Principal().getName(X500Principal.RFC1779),
-                            new String(Base64.getEncoder().encode(getEncodedCertificateOrNull(certificate)))
-
+                            new String(Base64.getEncoder().encode(getEncodedCertificateOrNull(certificate))),
+                            format.format(certificate.getNotAfter())
                     ),
                     !signature.getSignatureTimestamps().isEmpty() && signature.getSignatureTimestamps().stream().allMatch((t -> t.isValid() && simpleReport.getTimestampQualification(t.getDSSIdAsString()).equals(TimestampQualification.QTSA))),
                     timestamps.isEmpty() ? null : timestamps,
@@ -152,10 +153,10 @@ public record ValidationResponseBody(String containerType, String signatureForm,
         }
     }
 
-    record CertificateInfo(String qualification, String issuerDN, String subjectDN, String certificateDer) {
+    record CertificateInfo(String qualification, String issuerDN, String subjectDN, String certificateDer, String notAfter) {
     }
 
-    record TimestampCertificateInfo(String qualification, String timestampType, String subjectDN, String certificateDer, String productionTime) {
+    record TimestampCertificateInfo(String qualification, String timestampType, String subjectDN, String certificateDer, String productionTime, String notAfter) {
     }
 
     record SignedObject(String id, String mimeType, String filename) {
