@@ -13,12 +13,12 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Properties;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import javax.xml.transform.stream.StreamSource;
 
 import digital.slovensko.autogram.core.eforms.dto.ManifestXsltEntry;
 import digital.slovensko.autogram.core.errors.*;
@@ -53,6 +53,11 @@ public abstract class EFormUtils {
 
     public static String extractTransformationOutputMimeTypeString(String transformation)
             throws TransformationParsingErrorException {
+        return extractTransformationOutputMimeTypeString(transformation, false);
+    }
+
+    public static String extractTransformationOutputMimeTypeString(String transformation, boolean allowRelaxedStylesheetParsing)
+            throws TransformationParsingErrorException {
         if (transformation == null)
             return "TXT";
 
@@ -62,8 +67,7 @@ public abstract class EFormUtils {
 
         var method = "";
         try {
-            var document = XMLUtils.getSecureDocumentBuilder()
-                    .parse(new InputSource(new StringReader(transformation)));
+            var document = parseStylesheetDocument(transformation, allowRelaxedStylesheetParsing);
             var elem = document.getDocumentElement();
             var outputElements = elem.getElementsByTagNameNS("http://www.w3.org/1999/XSL/Transform", "output");
             if (outputElements.getLength() == 0)
@@ -95,13 +99,19 @@ public abstract class EFormUtils {
     }
 
     public static String computeDigest(byte[] data, String canonicalizationMethod, DigestAlgorithm digestAlgorithm, Charset encoding) throws XMLValidationException {
+        return computeDigest(data, canonicalizationMethod, digestAlgorithm, encoding, false);
+    }
+
+    public static String computeDigest(byte[] data, String canonicalizationMethod, DigestAlgorithm digestAlgorithm,
+                                       Charset encoding, boolean allowRelaxedStylesheetParsing) throws XMLValidationException {
         try {
-            var canonicalizedData = XMLCanonicalizer.createInstance(canonicalizationMethod).canonicalize(data);
+            var canonicalizer = XMLCanonicalizer.createInstance(canonicalizationMethod);
+            var canonicalizedData = canonicalizer.canonicalize(parseStylesheetDocument(data, encoding, allowRelaxedStylesheetParsing));
             var digest = DSSUtils.digest(digestAlgorithm, canonicalizedData);
             var asBase64 = Base64.getEncoder().encode(digest);
 
             return new String(asBase64, encoding);
-        } catch (DSSException e) {
+        } catch (DSSException | SAXException | IOException | ParserConfigurationException e) {
             throw new XMLValidationException("Zlyhala validácia XML Datacontainera", "Nepodarilo sa vypočítať odtlačok", e);
         }
     }
@@ -318,6 +328,10 @@ public abstract class EFormUtils {
     }
 
     public static String transform(DSSDocument documentToDisplay, String transformation) throws TransformationException {
+        return transform(documentToDisplay, transformation, false);
+    }
+
+    public static String transform(DSSDocument documentToDisplay, String transformation, boolean allowRelaxedStylesheetParsing) throws TransformationException {
         try {
             var parsedDocument = getXmlFromDocument(documentToDisplay);
             var xmlSource = new DOMSource(parsedDocument);
@@ -326,9 +340,12 @@ public abstract class EFormUtils {
             }
 
             transformation = transformation.replaceAll("\r\n", "\n");
+            if (!transformation.isEmpty() && transformation.charAt(0) == '\uFEFF')
+                transformation = transformation.substring(1);
+
             var transformerFactory = XMLUtils.getSecureTransformerFactory();
-            var s = new StreamSource(new ByteArrayInputStream(transformation.getBytes(ENCODING)));
-            var transformer = transformerFactory.newTransformer(s);
+            var stylesheet = parseStylesheetDocument(transformation, allowRelaxedStylesheetParsing);
+            var transformer = transformerFactory.newTransformer(new DOMSource(stylesheet));
 
             var outputProperties = new Properties();
             outputProperties.setProperty(OutputKeys.ENCODING, ENCODING.displayName());
@@ -365,9 +382,10 @@ public abstract class EFormUtils {
 
         var destinationType = xsltParams.destinationType();
         if (destinationType == null)
-            destinationType = extractTransformationOutputMimeTypeString(transformation);
+            destinationType = extractTransformationOutputMimeTypeString(transformation, xsltParams.trustedSource());
 
-        return new XsltParams(identifier, language, destinationType, xsltParams.target(), mediaType);
+        return new XsltParams(identifier, language, destinationType, xsltParams.target(), mediaType,
+                xsltParams.trustedSource());
     }
 
     public static String fillXsdIdentifier(String formIdentifier) {
@@ -419,56 +437,43 @@ public abstract class EFormUtils {
         for (int i = 0; i < nodes.getLength(); i++) {
             var node = nodes.item(i);
 
-            var fullPathNode = node.getAttributes().getNamedItem("full-path");
-            if (fullPathNode == null)
+            var fullPath = nullOrNodeValue(node.getAttributes().getNamedItem("full-path"));
+            if (fullPath == null)
                 continue;
-            var fullPath = fullPathNode.getNodeValue().replace("\\", "/");
 
-            var mediaTypeNode = node.getAttributes().getNamedItem("media-type");
-            var mediaType = mediaTypeNode != null ? mediaTypeNode.getNodeValue() : null;
+            fullPath = fullPath.replace("\\", "/");
 
-            var mediaDestination = "";
-            var mediaDestinationNode = node.getAttributes().getNamedItem("media-destination");
-            if (mediaDestinationNode != null) {
-                mediaDestination = mediaDestinationNode.getNodeValue();
-                if(!mediaDestination.equals("sign") && !mediaDestination.equals("x-xslt-ro"))
-                    continue;
+            var mediaType = nullOrNodeValue(node.getAttributes().getNamedItem("media-type"));
+            var mediaDestinationTypeDescription = nullOrNodeValue(node.getAttributes().getNamedItem("media-destination-type-description"));
+            var mediaDestination = nullOrNodeValue(node.getAttributes().getNamedItem("media-destination"));
+            var mediaDestinationType = nullOrNodeValue(node.getAttributes().getNamedItem("media-destination-type"));
 
+            if (mediaDestination != null) {
                 if (mediaType == null)
                     continue;
 
-                if (!mediaType.equals("application/xslt+xml") && !mediaType.equals("text/xsl"))
-                    if (!(
-                            (mediaType.equals("text/xml") || mediaType.equals("application/xml"))
-                                    && (fullPath.contains(".xsl") || fullPath.contains(".xslt"))
-                    ))
-                        continue;
+                if (Stream.of("sign", "x-xslt-ro", "view").noneMatch(mediaDestination::contains))
+                    continue;
+
+                if (Stream.of("application/xslt+xml", "text/xsl").noneMatch(mediaType::equals) &&
+                        (Stream.of("text/xml", "application/xml").noneMatch(mediaType::equals) ||
+                                Stream.of(".xsl", ".xslt").noneMatch(fullPath::endsWith)))
+                    continue;
 
             } else {
-                if (!fullPath.contains(".sb.xslt") && !fullPath.contains(".html.xslt"))
+                if (Stream.of(".sb.xslt", ".html.xslt").noneMatch(fullPath::endsWith))
                     continue;
 
                 mediaDestination = fullPath.contains(".sb.xslt") ? "sign" : "view";
             }
 
-            var languageNode = node.getAttributes().getNamedItem("media-language");
-            var language = languageNode != null ? languageNode.getNodeValue() : null;
-
-            var mediaDestinationTypeDescriptionNode = node.getAttributes().getNamedItem("media-destination-type-description");
-            var mediaDestinationTypeDescription = mediaDestinationTypeDescriptionNode != null ? mediaDestinationTypeDescriptionNode.getNodeValue() : null;
-
-            if (mediaDestinationTypeDescription == null) {
-                var mediaDestinationTypeNode = node.getAttributes().getNamedItem("media-destination-type");
-                var mediaDestinationType = mediaDestinationTypeNode != null ? mediaDestinationTypeNode.getNodeValue() : null;
-
-                if (mediaDestinationType != null)
-                    mediaDestinationTypeDescription = switch (mediaDestinationType) {
-                        case "text/plain" -> "TXT";
-                        case "text/html" -> "HTML";
-                        case "application/xhtml+xml" -> "XHTML";
-                        default -> null;
-                    };
-            }
+            if (mediaDestinationTypeDescription == null && mediaDestinationType != null)
+                mediaDestinationTypeDescription = switch (mediaDestinationType) {
+                    case "text/plain" -> "TXT";
+                    case "text/html" -> "HTML";
+                    case "application/xhtml+xml" -> "XHTML";
+                    default -> null;
+                };
 
             if (mediaDestinationTypeDescription == null) {
                 // need to get output method from xslt
@@ -483,17 +488,43 @@ public abstract class EFormUtils {
                 }
             }
 
-            var targetEnvironmentNode = node.getAttributes().getNamedItem("target-environment");
-            var targetEnvironment = targetEnvironmentNode != null ? targetEnvironmentNode.getNodeValue() : null;
-
-            entries.add(new ManifestXsltEntry(mediaType, language, mediaDestinationTypeDescription, targetEnvironment,
-                    fullPath, mediaDestination));
+            entries.add(new ManifestXsltEntry(
+                    mediaType,
+                    nullOrNodeValue(node.getAttributes().getNamedItem("media-language")),
+                    mediaDestinationTypeDescription,
+                    nullOrNodeValue(node.getAttributes().getNamedItem("target-environment")),
+                    fullPath,
+                    mediaDestination));
         }
 
         return entries;
     }
 
-    public static ManifestXsltEntry selectXslt(ArrayList<ManifestXsltEntry> entries, String xsltDestinationType, String xsltLanguage, String xsltTarget) {
+    private static String nullOrNodeValue(Node node) {
+        return node != null ? node.getNodeValue() : null;
+    }
+
+    private static Document parseStylesheetDocument(String transformation, boolean allowRelaxedStylesheetParsing)
+            throws ParserConfigurationException, IOException, SAXException {
+        var builder = allowRelaxedStylesheetParsing
+                ? XMLUtils.getSecureStylesheetDocumentBuilder()
+                : XMLUtils.getSecureDocumentBuilder();
+
+        return builder.parse(new InputSource(new StringReader(transformation)));
+    }
+
+    private static Document parseStylesheetDocument(byte[] transformation, Charset encoding, boolean allowRelaxedStylesheetParsing)
+            throws ParserConfigurationException, IOException, SAXException {
+        var builder = allowRelaxedStylesheetParsing
+                ? XMLUtils.getSecureStylesheetDocumentBuilder()
+                : XMLUtils.getSecureDocumentBuilder();
+        var inputSource = new InputSource(new ByteArrayInputStream(transformation));
+        inputSource.setEncoding(encoding.displayName());
+
+        return builder.parse(inputSource);
+    }
+
+    public static ManifestXsltEntry selectXslt(ArrayList<ManifestXsltEntry> entries, String xsltDestinationType, String xsltLanguage, String xsltTarget, String xsltDigest, String canonicalizationMethod, String sourcePrefix) {
         if (xsltDestinationType != null)
             entries.removeIf(entry -> !xsltDestinationType.equals(entry.destinationType()));
 
@@ -524,6 +555,24 @@ public abstract class EFormUtils {
         else if (entries.stream().filter(entry -> entry.language().equals("en")).count() > 0)
             entries.removeIf(entry -> !entry.language().equals("en"));
 
-        return entries.get(0);
+        if (xsltDigest != null)
+            entries.removeIf(entry -> {
+                try {
+                    var xsltString = getResource(sourcePrefix + entry.fullPath());
+                    if (xsltString == null)
+                        return false;
+
+                    var canidateDigest = computeDigest(xsltString, canonicalizationMethod, DigestAlgorithm.SHA256, ENCODING, true);
+
+                    return !canidateDigest.equals(xsltDigest);
+                } catch (XMLValidationException e) {
+                    return true;
+                }
+            });
+
+        if (entries.size() > 0)
+            return entries.get(0);
+
+        return null;
     }
 }

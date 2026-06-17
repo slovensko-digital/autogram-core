@@ -8,21 +8,26 @@ import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.validation.SchemaFactory;
 
+import java.io.StringReader;
+
 import org.xml.sax.SAXNotRecognizedException;
 import org.xml.sax.SAXNotSupportedException;
+import org.xml.sax.InputSource;
 
 public abstract class XMLUtils {
     public static DocumentBuilder getSecureDocumentBuilder() throws ParserConfigurationException {
-        var builderFactory = DocumentBuilderFactory.newInstance();
-        builderFactory.setNamespaceAware(true);
-        builderFactory.setXIncludeAware(false);
-        builderFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-        builderFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-        builderFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-        builderFactory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        var builderFactory = createSecureDocumentBuilderFactory();
         builderFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
 
         return builderFactory.newDocumentBuilder();
+    }
+
+    public static DocumentBuilder getSecureStylesheetDocumentBuilder() throws ParserConfigurationException {
+        var builderFactory = createSecureDocumentBuilderFactory();
+        var builder = builderFactory.newDocumentBuilder();
+        builder.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
+
+        return builder;
     }
 
     public static TransformerFactory getSecureTransformerFactory() throws TransformerConfigurationException {
@@ -42,5 +47,19 @@ public abstract class XMLUtils {
         schemaFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
 
         return schemaFactory;
+    }
+
+    private static DocumentBuilderFactory createSecureDocumentBuilderFactory() throws ParserConfigurationException {
+        var builderFactory = DocumentBuilderFactory.newInstance();
+        builderFactory.setNamespaceAware(true);
+        builderFactory.setXIncludeAware(false);
+        builderFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        builderFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+        builderFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        builderFactory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        builderFactory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        builderFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+
+        return builderFactory;
     }
 }

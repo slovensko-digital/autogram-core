@@ -38,7 +38,8 @@ public abstract class XDCValidator {
         }
     }
 
-    public static void validateXml(String xsd, String xslt, DSSDocument xmlDocument, String cannonicalizationMethod, DigestAlgorithm digestAlgorithm, boolean embedUsedSchemas)
+    public static void validateXml(String xsd, String xslt, DSSDocument xmlDocument, String cannonicalizationMethod,
+            DigestAlgorithm digestAlgorithm, boolean embedUsedSchemas, boolean allowRelaxedXsltCanonicalization)
             throws OriginalDocumentNotFoundException, XMLValidationException, XMLValidationException {
         if (xmlDocument == null)
             throw new XMLValidationException("Zlyhala validácia XML Datacontainera", "Nepodarilo sa načítať XML dokument");
@@ -55,7 +56,8 @@ public abstract class XDCValidator {
             if (!embedUsedSchemas && xsd != null && !validateXsdDigest(xsd, xml.getDocumentElement(), cannonicalizationMethod, digestAlgorithm))
                 throw new XMLValidationException("Zlyhala validácia XML Datacontainera", "XSD schéma sa nezhoduje s odtlačkom v XML Datacontaineri");
 
-            if (!embedUsedSchemas && xslt != null && !validateXsltDigest(xslt, xml.getDocumentElement(), cannonicalizationMethod, digestAlgorithm))
+                if (!embedUsedSchemas && xslt != null && !validateXsltDigest(xslt, xml.getDocumentElement(), cannonicalizationMethod, digestAlgorithm,
+                    allowRelaxedXsltCanonicalization))
                 throw new XMLValidationException("Zlyhala validácia XML Datacontainera", "XSLT transformácia sa nezhoduje s odtlačkom v XML Datacontaineri");
         }
 
@@ -92,16 +94,26 @@ public abstract class XDCValidator {
 
     public static boolean validateXsltDigest(String content, Element document, String canonicalizationMethod,
             DigestAlgorithm digestAlgorithm) throws XMLValidationException {
-        return validateDigest(content, document, "UsedPresentationSchemaReference", canonicalizationMethod,
-                digestAlgorithm);
+        return validateXsltDigest(content, document, canonicalizationMethod, digestAlgorithm, false);
+    }
+
+    public static boolean validateXsltDigest(String content, Element document, String canonicalizationMethod,
+            DigestAlgorithm digestAlgorithm, boolean allowRelaxedXsltCanonicalization) throws XMLValidationException {
+        return validateDigest(content, document, "UsedPresentationSchemaReference", canonicalizationMethod, digestAlgorithm, allowRelaxedXsltCanonicalization);
+    }
+
+    private static boolean validateDigest(String content, Element document, String fieldWithDigest,
+            String canonicalizationMethod, DigestAlgorithm digestAlgorithm, boolean allowRelaxedXsltCanonicalization)
+            throws XMLValidationException {
+        var contentBytes = content.getBytes(ENCODING);
+        var contentHash = computeDigest(contentBytes, canonicalizationMethod, digestAlgorithm, ENCODING, allowRelaxedXsltCanonicalization);
+        var digestValue = getDigestValueFromElement(document, fieldWithDigest);
+
+        return contentHash.equals(digestValue);
     }
 
     private static boolean validateDigest(String content, Element document, String fieldWithDigest,
             String canonicalizationMethod, DigestAlgorithm digestAlgorithm) throws XMLValidationException {
-        var contentBytes = content.getBytes(ENCODING);
-        var contentHash = computeDigest(contentBytes, canonicalizationMethod, digestAlgorithm, ENCODING);
-        var digestValue = getDigestValueFromElement(document, fieldWithDigest);
-
-        return contentHash.equals(digestValue);
+        return validateDigest(content, document, fieldWithDigest, canonicalizationMethod, digestAlgorithm, false);
     }
 }

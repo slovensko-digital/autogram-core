@@ -20,6 +20,7 @@ public class FsEFormResources extends EFormResources {
     private FsEFormResources(String formUrl, String canonicalizationMethod, String xsdDigest, String xsltDigest) {
         super(formUrl, xsdDigest, xsltDigest, canonicalizationMethod);
         this.embedUsedSchemas = false;
+        this.trustedXsltSource = true;
     }
 
     public static FsEFormResources buildFromFsFormId(String fsFormId, String canonicalizationMethod, String xsdDigest, String xsltDigest) {
@@ -131,7 +132,7 @@ public class FsEFormResources extends EFormResources {
         if (entries.isEmpty())
             return false;
 
-        var entry = selectXslt(entries, xsltDestinationType, xsltLanguage, xsltTarget);
+        var entry = selectXslt(entries, xsltDestinationType, xsltLanguage, xsltTarget, null, null, null);
         if (entry == null)
             return false;
 
@@ -139,7 +140,7 @@ public class FsEFormResources extends EFormResources {
         if (xsltString == null)
             return false;
 
-        var xsltDigest = computeDigest(xsltString, canonicalizationMethod, DigestAlgorithm.SHA256, ENCODING);
+        var xsltDigest = computeDigest(xsltString, canonicalizationMethod, DigestAlgorithm.SHA256, ENCODING, true);
         if (this.xsltDigest != null && !xsltDigest.equals(this.xsltDigest))
             throw new XMLValidationException("Zlyhala validácia XML Datacontainera", "Automaticky nájdená XSLT transformácia sa nezhoduje s odtlačkom v XML Datacontaineri");
 

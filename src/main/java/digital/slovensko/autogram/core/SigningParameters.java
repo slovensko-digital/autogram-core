@@ -99,7 +99,8 @@ public class SigningParameters {
         if (AutogramMimeType.isXDC(extractedDocumentMimeType) || AutogramMimeType.isXML(extractedDocumentMimeType)) {
             XDCValidator.validateXml(
                     eFormAttributes.schema(), eFormAttributes.transformation(), extractedDocument,
-                    propertiesCanonicalization, digestAlgorithm, eFormAttributes.embedUsedSchemas());
+                    propertiesCanonicalization, digestAlgorithm, eFormAttributes.embedUsedSchemas(),
+                    eFormAttributes.xsltParams() != null && eFormAttributes.xsltParams().trustedSource());
         }
 
         if (!AutogramMimeType.isXDC(extractedDocumentMimeType)) {
@@ -295,6 +296,11 @@ public class SigningParameters {
 
     public XsltParams getXsltParams() {
         return eFormAttributes.xsltParams();
+    }
+
+    public boolean isTrustedXsltSource() {
+        var xsltParams = eFormAttributes.xsltParams();
+        return xsltParams != null && xsltParams.trustedSource();
     }
 
     public boolean isPlainXml() {
