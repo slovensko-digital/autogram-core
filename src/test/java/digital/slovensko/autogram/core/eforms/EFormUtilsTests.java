@@ -1,9 +1,17 @@
 package digital.slovensko.autogram.core.eforms;
 
+import eu.europa.esig.dss.model.InMemoryDocument;
+import eu.europa.esig.dss.enumerations.DigestAlgorithm;
+import digital.slovensko.autogram.core.errors.TransformationException;
+import digital.slovensko.autogram.core.errors.TransformationParsingErrorException;
+import digital.slovensko.autogram.core.errors.XMLValidationException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+
+import javax.xml.crypto.dsig.CanonicalizationMethod;
+import java.nio.charset.StandardCharsets;
 
 
 public class EFormUtilsTests {
@@ -50,5 +58,65 @@ public class EFormUtilsTests {
     @Test
     void testIsOrsrUriReturnsFalseForNull() {
         Assertions.assertFalse(EFormUtils.isOrsrUri(null));
+    }
+
+    @Test
+    void testExtractTransformationOutputMimeTypeStringAllowsInternalDoctype() {
+        var transformation = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <!DOCTYPE xsl:stylesheet [
+                    <!ENTITY nbsp "&#160;">
+                ]>
+                <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+                    <xsl:output method="text" />
+                    <xsl:template match="/">Ahoj&nbsp;svet</xsl:template>
+                </xsl:stylesheet>
+                """;
+
+        Assertions.assertThrows(TransformationParsingErrorException.class,
+            () -> EFormUtils.extractTransformationOutputMimeTypeString(transformation));
+        Assertions.assertEquals("TXT", EFormUtils.extractTransformationOutputMimeTypeString(transformation, true));
+    }
+
+    @Test
+    void testTransformAllowsInternalDoctypeInXslt() {
+        var transformation = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <!DOCTYPE xsl:stylesheet [
+                    <!ENTITY copy "&#169;">
+                ]>
+                <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+                    <xsl:output method="text" omit-xml-declaration="yes" />
+                    <xsl:template match="/">Ahoj &copy;</xsl:template>
+                </xsl:stylesheet>
+                """;
+
+        var document = new InMemoryDocument("<root/>".getBytes(StandardCharsets.UTF_8), "test.xml");
+
+        Assertions.assertThrows(TransformationException.class, () -> EFormUtils.transform(document, transformation));
+        Assertions.assertEquals("Ahoj ©", EFormUtils.transform(document, transformation, true));
+    }
+
+    @Test
+    void testComputeDigestAllowsInternalDoctypeOnlyForTrustedXslt() {
+        var transformation = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <!DOCTYPE xsl:stylesheet [
+                    <!ENTITY copy "&#169;">
+                ]>
+                <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+                    <xsl:output method="text" omit-xml-declaration="yes" />
+                    <xsl:template match="/">Ahoj &copy;</xsl:template>
+                </xsl:stylesheet>
+                """;
+
+        Assertions.assertThrows(XMLValidationException.class,
+                () -> EFormUtils.computeDigest(transformation.getBytes(StandardCharsets.UTF_8),
+                        CanonicalizationMethod.INCLUSIVE, DigestAlgorithm.SHA256, StandardCharsets.UTF_8));
+
+        var digest = EFormUtils.computeDigest(transformation.getBytes(StandardCharsets.UTF_8),
+                CanonicalizationMethod.INCLUSIVE, DigestAlgorithm.SHA256, StandardCharsets.UTF_8, true);
+
+        Assertions.assertFalse(digest.isEmpty());
     }
 }

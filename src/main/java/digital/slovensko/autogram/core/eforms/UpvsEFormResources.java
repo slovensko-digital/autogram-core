@@ -7,7 +7,6 @@ import eu.europa.esig.dss.enumerations.DigestAlgorithm;
 import eu.europa.esig.dss.model.InMemoryDocument;
 
 import static digital.slovensko.autogram.core.eforms.EFormUtils.*;
-import static digital.slovensko.autogram.core.eforms.EFormUtils.computeDigest;
 
 public class UpvsEFormResources extends EFormResources {
     private static final String SOURCE_URL = "https://data.gov.sk/doc/egov/eform/";
@@ -23,6 +22,7 @@ public class UpvsEFormResources extends EFormResources {
         this.xsltDestinationType = xsltParams != null ? xsltParams.destinationType() : null;
         this.xsltTarget = xsltParams != null ? xsltParams.target() : null;
         this.embedUsedSchemas = false;
+        this.trustedXsltSource = true;
     }
 
     public String getXsdIdentifier() {
@@ -42,7 +42,7 @@ public class UpvsEFormResources extends EFormResources {
         if (entries.isEmpty())
             return false;
 
-        var entry = selectXslt(entries, xsltDestinationType, xsltLanguage, xsltTarget);
+        var entry = selectXslt(entries, xsltDestinationType, xsltLanguage, xsltTarget, this.xsltDigest, canonicalizationMethod, SOURCE_URL + url + "/");
         if (entry == null)
             return false;
 
@@ -50,7 +50,7 @@ public class UpvsEFormResources extends EFormResources {
         if (xsltString == null)
             return false;
 
-        var xsltDigest = computeDigest(xsltString, canonicalizationMethod, DigestAlgorithm.SHA256, ENCODING);
+        var xsltDigest = computeDigest(xsltString, canonicalizationMethod, DigestAlgorithm.SHA256, ENCODING, true);
         if (this.xsltDigest != null && !xsltDigest.equals(this.xsltDigest))
             throw new XMLValidationException("Zlyhala validácia XML Datacontainera", "Automaticky nájdená XSLT transformácia sa nezhoduje s odtlačkom v XML Datacontaineri");
 

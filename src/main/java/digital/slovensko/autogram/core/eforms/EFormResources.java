@@ -22,6 +22,7 @@ public abstract class EFormResources {
     protected String xsltTarget;
     protected String schema;
     protected boolean embedUsedSchemas;
+    protected boolean trustedXsltSource;
 
     protected EFormResources(String url, String xsdDigest, String xsltDigest, String canonicalizationMethod) {
         this.url = url;
@@ -31,7 +32,7 @@ public abstract class EFormResources {
     }
 
     public XsltParams getXsltParams() {
-        return new XsltParams(xsltIdentifier, xsltLanguage, xsltDestinationType, xsltTarget, xsltMediaType);
+        return new XsltParams(xsltIdentifier, xsltLanguage, xsltDestinationType, xsltTarget, xsltMediaType, trustedXsltSource);
     }
 
     public abstract boolean findResources() throws XMLValidationException;

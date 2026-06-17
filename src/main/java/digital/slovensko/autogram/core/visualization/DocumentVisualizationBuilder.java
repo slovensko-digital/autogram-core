@@ -50,18 +50,19 @@ public class DocumentVisualizationBuilder {
 
         if (isDocumentSupportingTransformation(documentToDisplay) && isTranformationAvailable(transformation)) {
             var transformationOutputMimeType = parameters.getXsltDestinationType();
+            var trustedXsltSource = parameters.isTrustedXsltSource();
 
             if ("HTML".equals(transformationOutputMimeType) || "XHTML".equals(transformationOutputMimeType))
-                return new HTMLVisualization(EFormUtils.transform(documentToDisplay, transformation), documentToDisplay.getName(), job);
+                return new HTMLVisualization(EFormUtils.transform(documentToDisplay, transformation, trustedXsltSource), documentToDisplay.getName(), job);
 
             if (transformationOutputMimeType.equals("TXT"))
-                return new PlainTextVisualization(EFormUtils.transform(documentToDisplay, transformation), documentToDisplay.getName(), job);
+                return new PlainTextVisualization(EFormUtils.transform(documentToDisplay, transformation, trustedXsltSource), documentToDisplay.getName(), job);
 
             return null;
         }
 
         if (documentToDisplay.getMimeType().equals(MimeTypeEnum.HTML))
-            return new HTMLVisualization(EFormUtils.transform(documentToDisplay, transformation), documentToDisplay.getName(), job);
+            return new HTMLVisualization(EFormUtils.transform(documentToDisplay, transformation, parameters.isTrustedXsltSource()), documentToDisplay.getName(), job);
 
         if (isTxt(documentToDisplay.getMimeType()))
             return new PlainTextVisualization(new String(documentToDisplay.openStream().readAllBytes(), StandardCharsets.UTF_8), documentToDisplay.getName(), job);

@@ -156,8 +156,7 @@ public abstract class XDCBuilder {
         var element = document.createElement("xdc:UsedPresentationSchemaReference");
         element.setAttribute("TransformAlgorithm", canonicalizationMethod);
         element.setAttribute("DigestMethod", toNamespacedString(digestAlgorithm));
-        element.setAttribute("DigestValue",
-                computeDigest(xsltSchema.getBytes(ENCODING), canonicalizationMethod, digestAlgorithm, ENCODING));
+        element.setAttribute("DigestValue", computeDigest(xsltSchema.getBytes(ENCODING), canonicalizationMethod, digestAlgorithm, ENCODING, xsltParams.trustedSource()));
         element.setAttribute("ContentType", xsltParams.mediaType());
         element.setAttribute("MediaDestinationTypeDescription", xsltParams.destinationType());
         element.setAttribute("Language", xsltParams.language());

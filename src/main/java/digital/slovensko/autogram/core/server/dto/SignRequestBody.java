@@ -1,15 +1,17 @@
 package digital.slovensko.autogram.core.server.dto;
 
+import digital.slovensko.autogram.core.AutogramMimeType;
 import digital.slovensko.autogram.core.SigningParameters;
+import digital.slovensko.autogram.core.eforms.xdc.XDCValidator;
 import digital.slovensko.autogram.core.errors.TransformationParsingErrorException;
 import digital.slovensko.autogram.core.server.errors.MalformedBodyException;
 import digital.slovensko.autogram.core.server.errors.RequestValidationException;
-import eu.europa.esig.dss.enumerations.MimeType;
 import eu.europa.esig.dss.model.InMemoryDocument;
 
 import java.util.Base64;
 
 import static digital.slovensko.autogram.core.AutogramMimeType.fromMimeTypeString;
+import static digital.slovensko.autogram.core.AutogramMimeType.isXML;
 
 public class SignRequestBody {
     private final Document document;
@@ -54,7 +56,11 @@ public class SignRequestBody {
         var content = decodeDocumentContent(document.content(), isBase64());
         var filename = document.filename();
 
-        return new InMemoryDocument(content, filename, getMimetype());
+        var mimeType = fromMimeTypeString(payloadMimeType.split(";")[0]);
+        if (isXML(mimeType) && XDCValidator.isXDCContent(new InMemoryDocument(content, filename, mimeType)))
+            mimeType = AutogramMimeType.XML_DATACONTAINER_WITH_CHARSET;
+
+        return new InMemoryDocument(content, filename, mimeType);
     }
 
     public void validateSigningParameters() throws RequestValidationException, MalformedBodyException,
@@ -71,10 +77,6 @@ public class SignRequestBody {
 
     public String getBatchId() {
         return batchId;
-    }
-
-    private MimeType getMimetype() {
-        return fromMimeTypeString(payloadMimeType.split(";")[0]);
     }
 
     private boolean isBase64() {
