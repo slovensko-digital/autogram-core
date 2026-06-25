@@ -3,11 +3,13 @@ package digital.slovensko.autogram.core;
 import digital.slovensko.autogram.core.dto.SignedDocument;
 import digital.slovensko.autogram.core.errors.AutogramException;
 import digital.slovensko.autogram.core.errors.DocumentNotSignedYetException;
+import digital.slovensko.autogram.core.errors.SigningWithExpiredCertificateException;
 import digital.slovensko.autogram.core.errors.UnrecognizedException;
 import digital.slovensko.autogram.core.errors.UnsupportedSignatureLevelException;
 import digital.slovensko.autogram.core.util.DSSUtils;
 import digital.slovensko.autogram.core.validation.SignatureValidator;
 import eu.europa.esig.dss.signature.AbstractSignatureParameters;
+import eu.europa.esig.dss.alert.exception.AlertException;
 import eu.europa.esig.dss.asic.cades.ASiCWithCAdESSignatureParameters;
 import eu.europa.esig.dss.asic.xades.ASiCWithXAdESSignatureParameters;
 import eu.europa.esig.dss.cades.CAdESSignatureParameters;
@@ -42,6 +44,13 @@ public class ExtendingJob {
             responder.onSuccess(extendedDocument);
         } catch (AutogramException e) {
             responder.onError(e);
+        } catch (AlertException e) {
+            if (e.getMessage() != null && e.getMessage().contains("is expired at signing time") && e.getMessage().contains("Error on signature augmentation.")) {
+                responder.onError(new SigningWithExpiredCertificateException());
+                return;
+            }
+
+            responder.onError(new UnrecognizedException(e));
         } catch (Exception e) {
             responder.onError(new UnrecognizedException(e));
         }
