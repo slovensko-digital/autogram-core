@@ -38,6 +38,7 @@ public record ErrorResponse (int statusCode, ErrorResponseBody body) {
             case "InvalidUrlParamException" -> new ErrorResponse(400, "INVALID_URL_PARAM", (AutogramException) e);
             case "DataToSignMismatchException" -> new ErrorResponse(400, "DATATOSIGN_MISMATCH", (AutogramException) e);
             case "DocumentNotSignedYetException" -> new ErrorResponse(422, "DOCUMENT_NOT_SIGNED", (AutogramException) e);
+            case "SigningWithExpiredCertificateException" -> new ErrorResponse(422, "CERTIFICATE_EXPIRED", (AutogramException) e);
             case "CryptographicSignatureVerificationException" -> new ErrorResponse(400, "SIGNATURE_NOT_IN_TACT", (AutogramException) e);
 
             default -> new ErrorResponse(500, "INTERNAL_ERROR", "Unexpected exception signing document", e.getMessage());
