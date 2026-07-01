@@ -47,7 +47,7 @@ public class VisibleSignature {
             var textParameters = new SignatureImageTextParameters();
             textParameters.setText(text);
             if (image != null)
-                textParameters.setSignerTextPosition(SignerTextPosition.RIGHT);
+                textParameters.setSignerTextPosition(SignerTextPosition.BOTTOM);
             imageParameters.setTextParameters(textParameters);
         }
 

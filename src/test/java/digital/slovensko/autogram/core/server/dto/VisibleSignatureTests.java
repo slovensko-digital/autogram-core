@@ -5,6 +5,7 @@ import digital.slovensko.autogram.core.server.errors.RequestValidationException;
 import com.google.gson.Gson;
 import eu.europa.esig.dss.enumerations.MimeTypeEnum;
 import eu.europa.esig.dss.enumerations.SignatureLevel;
+import eu.europa.esig.dss.enumerations.SignerTextPosition;
 import eu.europa.esig.dss.model.InMemoryDocument;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,21 @@ public class VisibleSignatureTests {
 
         Assertions.assertEquals("field-1", imageParameters.getFieldParameters().getFieldId());
         Assertions.assertNotNull(imageParameters.getImage());
+    }
+
+    @Test
+    void placesTextBelowGraphicVisibleSignature() {
+        var content = Base64.getEncoder().encodeToString("image-bytes".getBytes());
+        var visibleSignature = gson.fromJson(
+                "{\"fieldId\":\"field-1\",\"text\":\"Electronically signed\",\"image\":{\"filename\":\"stamp.png\",\"content\":\""
+                        + content + "\",\"mimeType\":\"image/png;base64\"}}",
+                VisibleSignature.class);
+
+        var imageParameters = visibleSignature.toDssParameters();
+
+        Assertions.assertEquals("Electronically signed", imageParameters.getTextParameters().getText());
+        Assertions.assertEquals(SignerTextPosition.BOTTOM,
+                imageParameters.getTextParameters().getSignerTextPosition());
     }
 
     @Test
