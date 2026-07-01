@@ -11,7 +11,6 @@ import digital.slovensko.autogram.core.util.AsicContainerUtils;
 import digital.slovensko.autogram.core.eforms.EFormUtils;
 import digital.slovensko.autogram.core.eforms.xdc.XDCValidator;
 import digital.slovensko.autogram.core.eforms.dto.XsltParams;
-import eu.europa.esig.dss.signature.AbstractSignatureParameters;
 import eu.europa.esig.dss.asic.cades.ASiCWithCAdESSignatureParameters;
 import eu.europa.esig.dss.asic.xades.ASiCWithXAdESSignatureParameters;
 import eu.europa.esig.dss.cades.CAdESSignatureParameters;
@@ -20,12 +19,19 @@ import eu.europa.esig.dss.enumerations.DigestAlgorithm;
 import eu.europa.esig.dss.enumerations.SignatureForm;
 import eu.europa.esig.dss.enumerations.SignatureLevel;
 import eu.europa.esig.dss.enumerations.SignaturePackaging;
+import eu.europa.esig.dss.model.BLevelParameters;
 import eu.europa.esig.dss.model.DSSDocument;
 import eu.europa.esig.dss.pades.PAdESSignatureParameters;
 import eu.europa.esig.dss.pades.SignatureImageParameters;
+import eu.europa.esig.dss.signature.AbstractSignatureParameters;
 import eu.europa.esig.dss.xades.XAdESSignatureParameters;
 
+import java.util.List;
+
 public class SigningParameters {
+    public static final String SIGNATURE_REFERENCE_ROLE_PREFIX = "AGP-REF:";
+    public static final String SIGNATURE_INSTANCE_ROLE_PREFIX = "AGP-HOST:";
+
     private final SignatureLevel level;
     private final DigestAlgorithm digestAlgorithm;
     private final ASiCContainerType container;
@@ -39,6 +45,8 @@ public class SigningParameters {
     private final boolean checkPDFACompliance;
     private final int visualizationWidth;
     private SignatureImageParameters padesVisibleSignatureParameters;
+    private String signatureReference;
+    private String signatureInstance;
 
     private SigningParameters(
             SignatureLevel level, DigestAlgorithm digestAlgorithm, ASiCContainerType container, SignaturePackaging signaturePackaging,
@@ -152,7 +160,7 @@ public class SigningParameters {
         return signingParameters;
     }
 
-    public AbstractSignatureParameters getSignatureParameters() {
+    public AbstractSignatureParameters<?> getSignatureParameters() {
         return switch (getLevel().getSignatureForm()) {
             case XAdES -> getContainer() != null ? getASiCWithXAdESSignatureParameters() : getXAdESSignatureParameters();
             case CAdES -> getContainer() != null ? getASiCWithCAdESSignatureParameters() : getCAdESSignatureParameters();
@@ -170,6 +178,7 @@ public class SigningParameters {
         parameters.setSigningCertificateDigestMethod(getDigestAlgorithm());
         parameters.setSignedInfoCanonicalizationMethod(getInfoCanonicalization());
         parameters.setSignedPropertiesCanonicalizationMethod(getPropertiesCanonicalization());
+        parameters.setSignaturePackaging(getSignaturePackaging());
         parameters.setKeyInfoCanonicalizationMethod(getKeyInfoCanonicalization());
         parameters.setEn319132(isEn319132());
         parameters.setAddX509SubjectName(true);
@@ -199,6 +208,7 @@ public class SigningParameters {
         parameters.setDigestAlgorithm(getDigestAlgorithm());
         parameters.setSignaturePackaging(SignaturePackaging.ENVELOPING);
         parameters.setEn319122(isEn319132());
+        applyCadesSignatureReference(parameters);
 
         return parameters;
     }
@@ -209,6 +219,7 @@ public class SigningParameters {
         parameters.setSignatureLevel(getLevel());
         parameters.setDigestAlgorithm(getDigestAlgorithm());
         parameters.setEn319122(isEn319132());
+        applyPadesSignatureReference(parameters);
 
         if (padesVisibleSignatureParameters != null)
             parameters.setImageParameters(padesVisibleSignatureParameters);
@@ -223,6 +234,7 @@ public class SigningParameters {
         parameters.setDigestAlgorithm(getDigestAlgorithm());
         parameters.setEn319122(isEn319132());
         parameters.aSiC().setContainerType(getContainer());
+        applyCadesSignatureReference(parameters);
 
         return parameters;
     }
@@ -322,5 +334,80 @@ public class SigningParameters {
 
     public void setPadesVisibleSignatureParameters(SignatureImageParameters padesVisibleSignatureParameters) {
         this.padesVisibleSignatureParameters = padesVisibleSignatureParameters;
+    }
+
+    public String getSignatureReference() {
+        return signatureReference;
+    }
+
+    public void setSignatureReference(String signatureReference) {
+        this.signatureReference = signatureReference;
+    }
+
+    public String getSignatureInstance() {
+        return signatureInstance;
+    }
+
+    public void setSignatureInstance(String signatureInstance) {
+        this.signatureInstance = signatureInstance;
+    }
+
+    public void applySignatureReference(DSSDocument document, AbstractSignatureParameters<?> signatureParameters) {
+        if ((signatureReference == null || signatureReference.isBlank()) && (signatureInstance == null || signatureInstance.isBlank()))
+            return;
+
+        if (signatureParameters instanceof PAdESSignatureParameters padesSignatureParameters) {
+            applyPadesSignatureReference(padesSignatureParameters);
+        } else if (signatureParameters instanceof XAdESSignatureParameters xadesSignatureParameters) {
+            applyXadesSignatureReference(xadesSignatureParameters);
+        } else if (signatureParameters instanceof CAdESSignatureParameters cadesSignatureParameters) {
+            applyCadesSignatureReference(cadesSignatureParameters);
+        }
+    }
+
+    private void applyPadesSignatureReference(PAdESSignatureParameters parameters) {
+        var bLevelParameters = ensureBLevelParameters(parameters);
+        bLevelParameters.setClaimedSignerRoles(buildClaimedSignerRoles());
+    }
+
+    private void applyXadesSignatureReference(XAdESSignatureParameters parameters) {
+        var bLevelParameters = ensureBLevelParameters(parameters);
+        bLevelParameters.setClaimedSignerRoles(buildClaimedSignerRoles());
+    }
+
+    private void applyCadesSignatureReference(CAdESSignatureParameters parameters) {
+        parameters.setContentIdentifierPrefix(SIGNATURE_REFERENCE_ROLE_PREFIX);
+        parameters.setContentIdentifierSuffix(buildContentIdentifierSuffix());
+    }
+
+    private List<String> buildClaimedSignerRoles() {
+        var roles = new java.util.ArrayList<String>();
+
+        if (signatureReference != null && !signatureReference.isBlank())
+            roles.add(SIGNATURE_REFERENCE_ROLE_PREFIX + signatureReference);
+
+        if (signatureInstance != null && !signatureInstance.isBlank())
+            roles.add(SIGNATURE_INSTANCE_ROLE_PREFIX + signatureInstance);
+
+        return roles;
+    }
+
+    private String buildContentIdentifierSuffix() {
+        if (signatureReference == null || signatureReference.isBlank())
+            return signatureInstance;
+
+        if (signatureInstance == null || signatureInstance.isBlank())
+            return signatureReference;
+
+        return signatureReference + "|" + SIGNATURE_INSTANCE_ROLE_PREFIX + signatureInstance;
+    }
+
+    private BLevelParameters ensureBLevelParameters(AbstractSignatureParameters<?> parameters) {
+        var bLevelParameters = parameters.bLevel();
+        if (bLevelParameters == null) {
+            bLevelParameters = new BLevelParameters();
+            parameters.setBLevelParams(bLevelParameters);
+        }
+        return bLevelParameters;
     }
 }

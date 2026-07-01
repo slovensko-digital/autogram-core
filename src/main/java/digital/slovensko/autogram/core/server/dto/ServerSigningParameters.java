@@ -77,6 +77,8 @@ public class ServerSigningParameters {
     private final TransformationOutputMimeType transformationMediaDestinationTypeDescription;
     private final String transformationTargetEnvironment;
     private final String fsFormId;
+    private final String signatureReference;
+    private final String signatureInstance;
     private VisibleSignature visibleSignature;
 
     public ServerSigningParameters(LocalSignatureLevel level, ASiCContainerType container,
@@ -88,7 +90,8 @@ public class ServerSigningParameters {
             String Identifier, boolean checkPDFACompliance, VisualizationWidthEnum preferredPreviewWidth,
             boolean autoLoadEform, boolean embedUsedSchemas, String schemaIdentifier, String transformationIdentifier,
             String transformationLanguage, TransformationOutputMimeType transformationMediaDestinationTypeDescription,
-            String transformationTargetEnvironment, String fsFormId) {
+            String transformationTargetEnvironment, String fsFormId, String signatureReference,
+            String signatureInstance) {
         this.level = level;
         this.container = container;
         this.containerXmlns = containerXmlns;
@@ -111,6 +114,8 @@ public class ServerSigningParameters {
         this.transformationMediaDestinationTypeDescription = transformationMediaDestinationTypeDescription;
         this.transformationTargetEnvironment = transformationTargetEnvironment;
         this.fsFormId = fsFormId;
+        this.signatureReference = signatureReference;
+        this.signatureInstance = signatureInstance;
     }
 
     public ServerSigningParameters() {
@@ -134,6 +139,8 @@ public class ServerSigningParameters {
         this.transformationMediaDestinationTypeDescription = null;
         this.transformationTargetEnvironment = null;
         this.fsFormId = null;
+        this.signatureReference = null;
+        this.signatureInstance = null;
     }
 
     public SigningParameters getSigningParameters(boolean isBase64, DSSDocument document) {
@@ -171,6 +178,9 @@ public class ServerSigningParameters {
 
         if (visibleSignature != null)
             signingParameters.setPadesVisibleSignatureParameters(visibleSignature.toDssParameters());
+
+        signingParameters.setSignatureReference(signatureReference);
+        signingParameters.setSignatureInstance(signatureInstance);
 
         return signingParameters;
     }

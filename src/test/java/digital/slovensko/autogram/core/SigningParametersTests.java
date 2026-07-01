@@ -244,4 +244,58 @@ public class SigningParametersTests {
                 () -> SigningParameters.buildParameters(SignatureLevel.XAdES_BASELINE_B, null, asice, enveloping,
                         false, inclusive, inclusive, inclusive, eFormAttributes, false, null, false, 800, document));
     }
+
+    @Test
+    void testPadesSignatureReferenceUsesClaimedSignerRole() {
+        var pdf = new InMemoryDocument("%PDF-1.4".getBytes(), "document.pdf", MimeTypeEnum.PDF);
+        var signingParameters = SigningParameters.buildParameters(
+                SignatureLevel.PAdES_BASELINE_B, null, null, null, false, null, null, null,
+                null, false, null, false, 640, pdf);
+        signingParameters.setSignatureReference("PUBLIC-REF-123");
+        signingParameters.setSignatureInstance("agp.example.test");
+
+        var padesParameters = signingParameters.getPAdESSignatureParameters();
+        signingParameters.applySignatureReference(pdf, padesParameters);
+
+        Assertions.assertEquals(
+                java.util.List.of(
+                        SigningParameters.SIGNATURE_REFERENCE_ROLE_PREFIX + "PUBLIC-REF-123",
+                        SigningParameters.SIGNATURE_INSTANCE_ROLE_PREFIX + "agp.example.test"),
+                padesParameters.bLevel().getClaimedSignerRoles());
+    }
+
+    @Test
+    void testAsicCadesSignatureReferenceUsesContentIdentifier() {
+        var pdf = new InMemoryDocument("%PDF-1.4".getBytes(), "document.pdf", MimeTypeEnum.PDF);
+        var signingParameters = SigningParameters.buildParameters(
+                SignatureLevel.CAdES_BASELINE_B, null, asice, enveloping, false, null, null, null,
+                null, false, null, false, 640, pdf);
+        signingParameters.setSignatureReference("PUBLIC-REF-123");
+                signingParameters.setSignatureInstance("agp.example.test");
+
+        var cadesParameters = signingParameters.getASiCWithCAdESSignatureParameters();
+        signingParameters.applySignatureReference(pdf, cadesParameters);
+
+        Assertions.assertEquals(SigningParameters.SIGNATURE_REFERENCE_ROLE_PREFIX, cadesParameters.getContentIdentifierPrefix());
+                Assertions.assertEquals("PUBLIC-REF-123|AGP-HOST:agp.example.test", cadesParameters.getContentIdentifierSuffix());
+    }
+
+    @Test
+    void testAsicXadesSignatureReferenceUsesClaimedSignerRole() {
+        var document = new InMemoryDocument(generalAgendaXml, "doc.xml", MimeTypeEnum.XML);
+        var signingParameters = SigningParameters.buildParameters(
+                SignatureLevel.XAdES_BASELINE_B, null, asice, enveloping, false, null, null, null,
+                null, false, null, false, 640, document);
+        signingParameters.setSignatureReference("PUBLIC-REF-123");
+        signingParameters.setSignatureInstance("agp.example.test");
+
+        var xadesParameters = signingParameters.getASiCWithXAdESSignatureParameters();
+        signingParameters.applySignatureReference(document, xadesParameters);
+
+        Assertions.assertEquals(
+                java.util.List.of(
+                        SigningParameters.SIGNATURE_REFERENCE_ROLE_PREFIX + "PUBLIC-REF-123",
+                        SigningParameters.SIGNATURE_INSTANCE_ROLE_PREFIX + "agp.example.test"),
+                xadesParameters.bLevel().getClaimedSignerRoles());
+    }
 }
