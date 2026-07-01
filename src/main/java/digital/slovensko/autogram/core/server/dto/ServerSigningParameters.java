@@ -77,6 +77,7 @@ public class ServerSigningParameters {
     private final TransformationOutputMimeType transformationMediaDestinationTypeDescription;
     private final String transformationTargetEnvironment;
     private final String fsFormId;
+    private VisibleSignature visibleSignature;
 
     public ServerSigningParameters(LocalSignatureLevel level, ASiCContainerType container,
             String containerFilename, String containerXmlns, SignaturePackaging packaging,
@@ -152,7 +153,7 @@ public class ServerSigningParameters {
                 xsltParams,
                 getBoolean(embedUsedSchemas));
 
-        return SigningParameters.buildParameters(
+        var signingParameters = SigningParameters.buildParameters(
                 getSignatureLevel(),
                 digestAlgorithm,
                 getContainer(),
@@ -167,6 +168,15 @@ public class ServerSigningParameters {
                 getBoolean(checkPDFACompliance),
                 getVisualizationWidth(),
                 document);
+
+        if (visibleSignature != null)
+            signingParameters.setPadesVisibleSignatureParameters(visibleSignature.toDssParameters());
+
+        return signingParameters;
+    }
+
+    public VisibleSignature getVisibleSignature() {
+        return visibleSignature;
     }
 
     private static boolean getBoolean(Boolean variable) {
@@ -309,6 +319,13 @@ public class ServerSigningParameters {
             if (container != null)
                 throw new RequestValidationException("Parameters.Container is not supported for PAdES",
                         "PAdES signature cannot be in a container");
+        }
+
+        if (visibleSignature != null) {
+            if (getSignatureLevel().getSignatureForm() != PAdES)
+                throw new RequestValidationException("Parameters.VisibleSignature is only supported for PAdES", "");
+
+            visibleSignature.validate("Parameters.VisibleSignature");
         }
 
         if (getSignatureLevel().getSignatureForm() == XAdES) {
