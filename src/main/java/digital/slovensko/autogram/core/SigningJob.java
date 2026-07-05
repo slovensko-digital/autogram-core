@@ -72,11 +72,15 @@ public class SigningJob {
         var signatureValue = new SignatureValue(token.getSignatureAlgorithm(), Base64.getDecoder().decode(signedData));
         var commonCertificateVerifier = new CommonCertificateVerifier();
         var signatureParameters = parameters.getSignatureParameters();
+        parameters.applySignatureReference(document, signatureParameters);
         var service = DSSUtils.getServiceForSignatureLevel(parameters.getSignatureType(), parameters.getContainer(), commonCertificateVerifier);
 
         signatureParameters.setSigningCertificate(token);
         signatureParameters.setCertificateChain(token);
-        var bLevelParameters = new BLevelParameters();
+        var bLevelParameters = signatureParameters.bLevel();
+        if (bLevelParameters == null) {
+            bLevelParameters = new BLevelParameters();
+        }
         bLevelParameters.setSigningDate(new Date(dataToSignStructure.signingTime()));
         signatureParameters.setBLevelParams(bLevelParameters);
 
@@ -130,12 +134,16 @@ public class SigningJob {
     public DataToSignStructure buildDataToSign(CertificateToken token) {
         var commonCertificateVerifier = new CommonCertificateVerifier();
         var signatureParameters = parameters.getSignatureParameters();
+        parameters.applySignatureReference(document, signatureParameters);
         var service = DSSUtils.getServiceForSignatureLevel(parameters.getSignatureType(), parameters.getContainer(), commonCertificateVerifier);
         var signingTime = new Date();
 
         signatureParameters.setSigningCertificate(token);
 
-        var bLevelParameters = new BLevelParameters();
+        var bLevelParameters = signatureParameters.bLevel();
+        if (bLevelParameters == null) {
+            bLevelParameters = new BLevelParameters();
+        }
         bLevelParameters.setSigningDate(signingTime);
         signatureParameters.setBLevelParams(bLevelParameters);
 

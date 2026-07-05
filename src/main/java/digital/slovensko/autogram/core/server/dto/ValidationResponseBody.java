@@ -18,6 +18,7 @@ import javax.security.auth.x500.X500Principal;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
@@ -113,12 +114,55 @@ public record ValidationResponseBody(String containerType, String signatureForm,
         }
     }
 
+    static AgpMetadata extractAgpMetadata(List<String> claimedRoles, String contentIdentifier) {
+        var metadataSources = new ArrayList<String>();
+
+        if (claimedRoles != null)
+            metadataSources.addAll(claimedRoles);
+
+        if (contentIdentifier != null && !contentIdentifier.isBlank())
+            metadataSources.add(contentIdentifier);
+
+        String agpReference = null;
+        String agpInstance = null;
+
+        for (var source : metadataSources) {
+            if (source == null || source.isBlank())
+                continue;
+
+            for (var part : source.split("\\|")) {
+                if (agpReference == null && part.startsWith(digital.slovensko.autogram.core.SigningParameters.SIGNATURE_REFERENCE_ROLE_PREFIX)) {
+                    agpReference = part.substring(digital.slovensko.autogram.core.SigningParameters.SIGNATURE_REFERENCE_ROLE_PREFIX.length()).trim();
+                }
+
+                if (agpInstance == null && part.startsWith(digital.slovensko.autogram.core.SigningParameters.SIGNATURE_INSTANCE_ROLE_PREFIX)) {
+                    agpInstance = part.substring(digital.slovensko.autogram.core.SigningParameters.SIGNATURE_INSTANCE_ROLE_PREFIX.length()).trim();
+                }
+            }
+        }
+
+        return new AgpMetadata(blankToNull(agpReference), blankToNull(agpInstance));
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null)
+            return null;
+
+        var trimmedValue = value.trim();
+        return trimmedValue.isEmpty() ? null : trimmedValue;
+    }
+
     record Signature(String validationResult, String level, String claimedSigningTime, String bestSigningTime,
+                     String agpReference, String agpInstance,
                      CertificateInfo signingCertificate, boolean areQualifiedTimestamps, List<TimestampCertificateInfo> timestamps,
                      List<String> signedObjectsIds) {
         public static Signature build(AdvancedSignature signature, SimpleReport simpleReport, DiagnosticData diagnosticData) {
             var signatureId = signature.getId();
             var certificate = signature.getSigningCertificateToken().getCertificate();
+            var signatureWrapper = diagnosticData.getSignatureById(signatureId);
+            var agpMetadata = extractAgpMetadata(
+                    signatureWrapper.getSignerRoleDetails(signatureWrapper.getClaimedRoles()),
+                    signatureWrapper.getContentIdentifier());
 
             var timestamps = signature.getAllTimestamps().stream().map((timestamp) -> {
                 var timestampId = timestamp.getDSSIdAsString();
@@ -139,6 +183,8 @@ public record ValidationResponseBody(String containerType, String signatureForm,
                     simpleReport.getSignatureFormat(signatureId).name(),
                     format.format(signature.getSigningTime()),
                     format.format(simpleReport.getBestSignatureTime(signatureId)),
+                    agpMetadata.agpReference(),
+                    agpMetadata.agpInstance(),
                     new CertificateInfo(
                             simpleReport.getSignatureQualification(signatureId).name(),
                             certificate.getIssuerX500Principal().getName(X500Principal.RFC1779),
@@ -151,6 +197,9 @@ public record ValidationResponseBody(String containerType, String signatureForm,
                     diagnosticData.getSignerDocuments(signatureId).stream().map(SignerDataWrapper::getId).toList()
             );
         }
+    }
+
+    record AgpMetadata(String agpReference, String agpInstance) {
     }
 
     record CertificateInfo(String qualification, String issuerDN, String subjectDN, String certificateDer, String notAfter) {
