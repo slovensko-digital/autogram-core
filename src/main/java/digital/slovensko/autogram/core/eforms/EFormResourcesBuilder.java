@@ -40,7 +40,8 @@ public abstract class EFormResourcesBuilder {
             return null;
 
         if (!eformResources.findResources())
-            return null;
+            throw new XMLValidationException("Zlyhala príprava elektronického formulára",
+                    "Nepodarilo sa nájsť XSLT transformáciu alebo XSD schému");
 
         return eformResources;
     }
