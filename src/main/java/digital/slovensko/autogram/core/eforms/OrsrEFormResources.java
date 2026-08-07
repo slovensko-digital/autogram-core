@@ -3,7 +3,6 @@ package digital.slovensko.autogram.core.eforms;
 import digital.slovensko.autogram.core.errors.XMLValidationException;
 
 import static digital.slovensko.autogram.core.eforms.EFormUtils.ALLOWED_ORSR_URL_PREFIXES;
-import static digital.slovensko.autogram.core.eforms.EFormUtils.getResource;
 
 public class OrsrEFormResources extends EFormResources {
     public OrsrEFormResources(String url, String schema, String transformation) {
@@ -25,7 +24,7 @@ public class OrsrEFormResources extends EFormResources {
         validateResourceUrl(url);
 
         if (schema == null) {
-            var schema_raw = getResource(url);
+            var schema_raw = resourceLoader.getResource(url);
             if (schema_raw == null)
                 throw new XMLValidationException("Zlyhala príprava elektronického formulára", "Nepodarilo sa nájsť XSD schému elektronického formulára");
 
@@ -35,7 +34,7 @@ public class OrsrEFormResources extends EFormResources {
         if (transformation == null) {
             var transformationUrl = url.replace(".xsd", ".xslt");
             validateResourceUrl(transformationUrl);
-            var transformation_raw = getResource(transformationUrl);
+            var transformation_raw = resourceLoader.getResource(transformationUrl);
             if (transformation_raw == null)
                 throw new XMLValidationException("Zlyhala príprava elektronického formulára", "Nepodarilo sa nájsť XSLT transformáciu elektronického formulára");
 

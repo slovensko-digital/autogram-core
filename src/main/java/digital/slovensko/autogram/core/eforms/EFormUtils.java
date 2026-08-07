@@ -8,27 +8,22 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Properties;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import digital.slovensko.autogram.core.eforms.dto.ManifestXsltEntry;
 import digital.slovensko.autogram.core.errors.*;
-import eu.europa.esig.dss.spi.exception.DSSExternalResourceException;
 import eu.europa.esig.dss.xml.utils.XMLCanonicalizer;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
@@ -37,12 +32,10 @@ import digital.slovensko.autogram.core.util.XMLUtils;
 import eu.europa.esig.dss.enumerations.DigestAlgorithm;
 import eu.europa.esig.dss.model.DSSDocument;
 import eu.europa.esig.dss.model.DSSException;
-import eu.europa.esig.dss.service.http.commons.CommonsDataLoader;
-import eu.europa.esig.dss.service.http.commons.FileCacheDataLoader;
 import eu.europa.esig.dss.spi.DSSUtils;
 
 public abstract class EFormUtils {
-    private static final Charset ENCODING = StandardCharsets.UTF_8;
+    public static final Charset ENCODING = StandardCharsets.UTF_8;
     public static final String XDC_XMLNS = "http://data.gov.sk/def/container/xmldatacontainer+xml/1.1";
     public static final List<String> ALLOWED_ORSR_URL_PREFIXES = List.of(
         "http://eformulare.justice.sk/",
@@ -238,37 +231,6 @@ public abstract class EFormUtils {
         return null;
     }
 
-    public static byte[] getResource(String url) throws ServiceUnavailableException {
-        var offlineFileLoader = new FileCacheDataLoader();
-        offlineFileLoader.setCacheExpirationTime(21600000);  // 6 hours
-        offlineFileLoader.setDataLoader(new CommonsDataLoader());
-
-        DSSDocument document;
-        try {
-            document = offlineFileLoader.getDocument(url);
-        } catch (DSSExternalResourceException e) {
-            var matcher = Pattern.compile("HTTP status code : (\\d{3})").matcher(e.getCause().getMessage());
-            if (!matcher.find())
-                return null;
-
-            if (matcher.group(1).startsWith("5"))
-                throw new ServiceUnavailableException(url, e);
-
-            return null;
-        } catch (DSSException e) {
-            return null;
-        }
-
-        if (document == null)
-            return null;
-
-        try (var inputStream = document.openStream()) {
-            return inputStream.readAllBytes();
-        } catch (IOException e) {
-            return null;
-        }
-    }
-
     public static Document getXmlFromDocument(DSSDocument documentToDisplay) throws XMLValidationException {
         try {
             var is = documentToDisplay.openStream();
@@ -431,79 +393,6 @@ public abstract class EFormUtils {
         return Pattern.compile("^([0-9]+_[0-9]+)$").matcher(fsFormId).matches();
     }
 
-    public static ArrayList<ManifestXsltEntry> getManifestXsltEntries(NodeList nodes, String source_url, String form_url) {
-        var entries = new ArrayList<ManifestXsltEntry>();
-
-        for (int i = 0; i < nodes.getLength(); i++) {
-            var node = nodes.item(i);
-
-            var fullPath = nullOrNodeValue(node.getAttributes().getNamedItem("full-path"));
-            if (fullPath == null)
-                continue;
-
-            fullPath = fullPath.replace("\\", "/");
-
-            var mediaType = nullOrNodeValue(node.getAttributes().getNamedItem("media-type"));
-            var mediaDestinationTypeDescription = nullOrNodeValue(node.getAttributes().getNamedItem("media-destination-type-description"));
-            var mediaDestination = nullOrNodeValue(node.getAttributes().getNamedItem("media-destination"));
-            var mediaDestinationType = nullOrNodeValue(node.getAttributes().getNamedItem("media-destination-type"));
-
-            if (mediaDestination != null) {
-                if (mediaType == null)
-                    continue;
-
-                if (Stream.of("sign", "x-xslt-ro", "view").noneMatch(mediaDestination::contains))
-                    continue;
-
-                if (Stream.of("application/xslt+xml", "text/xsl").noneMatch(mediaType::equals) &&
-                        (Stream.of("text/xml", "application/xml").noneMatch(mediaType::equals) ||
-                                Stream.of(".xsl", ".xslt").noneMatch(fullPath::endsWith)))
-                    continue;
-
-            } else {
-                if (Stream.of(".sb.xslt", ".html.xslt").noneMatch(fullPath::endsWith))
-                    continue;
-
-                mediaDestination = fullPath.contains(".sb.xslt") ? "sign" : "view";
-            }
-
-            if (mediaDestinationTypeDescription == null && mediaDestinationType != null)
-                mediaDestinationTypeDescription = switch (mediaDestinationType) {
-                    case "text/plain" -> "TXT";
-                    case "text/html" -> "HTML";
-                    case "application/xhtml+xml" -> "XHTML";
-                    default -> null;
-                };
-
-            if (mediaDestinationTypeDescription == null) {
-                // need to get output method from xslt
-                var xsltString = getResource(source_url + form_url + "/" + fullPath);
-                if (xsltString == null)
-                    continue;
-
-                try {
-                    mediaDestinationTypeDescription = EFormUtils.extractTransformationOutputMimeTypeString(new String(xsltString, ENCODING));
-                } catch (TransformationParsingErrorException e) {
-                    continue;
-                }
-            }
-
-            entries.add(new ManifestXsltEntry(
-                    mediaType,
-                    nullOrNodeValue(node.getAttributes().getNamedItem("media-language")),
-                    mediaDestinationTypeDescription,
-                    nullOrNodeValue(node.getAttributes().getNamedItem("target-environment")),
-                    fullPath,
-                    mediaDestination));
-        }
-
-        return entries;
-    }
-
-    private static String nullOrNodeValue(Node node) {
-        return node != null ? node.getNodeValue() : null;
-    }
-
     private static Document parseStylesheetDocument(String transformation, boolean allowRelaxedStylesheetParsing)
             throws ParserConfigurationException, IOException, SAXException {
         var builder = allowRelaxedStylesheetParsing
@@ -524,55 +413,4 @@ public abstract class EFormUtils {
         return builder.parse(inputSource);
     }
 
-    public static ManifestXsltEntry selectXslt(ArrayList<ManifestXsltEntry> entries, String xsltDestinationType, String xsltLanguage, String xsltTarget, String xsltDigest, String canonicalizationMethod, String sourcePrefix) {
-        if (xsltDestinationType != null)
-            entries.removeIf(entry -> !xsltDestinationType.equals(entry.destinationType()));
-
-        if (xsltLanguage != null)
-            entries.removeIf(entry -> !xsltLanguage.equals(entry.language()));
-
-        if (xsltTarget != null)
-            entries.removeIf(entry -> !xsltTarget.equals(entry.target()));
-
-        if (entries.size() == 1)
-            return entries.get(0);
-
-        if (entries.stream().filter(entry -> entry.mediaDesination().equals("sign")).count() > 0)
-            entries.removeIf(entry -> !entry.mediaDesination().equals("sign"));
-
-        if (entries.stream().filter(entry -> entry.destinationType().equals("XHTML")).count() > 0)
-            entries.removeIf(entry -> !entry.destinationType().equals("XHTML"));
-
-        else if (entries.stream().filter(entry -> entry.destinationType().equals("HTML")).count() > 0)
-            entries.removeIf(entry -> !entry.destinationType().equals("HTML"));
-
-        else if (entries.stream().filter(entry -> entry.destinationType().equals("TXT")).count() > 0)
-            entries.removeIf(entry -> !entry.destinationType().equals("TXT"));
-
-        if (entries.stream().filter(entry -> entry.language().equals("sk")).count() > 0)
-            entries.removeIf(entry -> !entry.language().equals("sk"));
-
-        else if (entries.stream().filter(entry -> entry.language().equals("en")).count() > 0)
-            entries.removeIf(entry -> !entry.language().equals("en"));
-
-        if (xsltDigest != null)
-            entries.removeIf(entry -> {
-                try {
-                    var xsltString = getResource(sourcePrefix + entry.fullPath());
-                    if (xsltString == null)
-                        return false;
-
-                    var canidateDigest = computeDigest(xsltString, canonicalizationMethod, DigestAlgorithm.SHA256, ENCODING, true);
-
-                    return !canidateDigest.equals(xsltDigest);
-                } catch (XMLValidationException e) {
-                    return true;
-                }
-            });
-
-        if (entries.size() > 0)
-            return entries.get(0);
-
-        return null;
-    }
 }
