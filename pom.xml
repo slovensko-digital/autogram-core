@@ -31,6 +31,7 @@
         <gson.version>2.14.0</gson.version>
         <junit.version>6.1.1</junit.version>
         <slf4j.version>2.0.18</slf4j.version>
+        <jlink.executable.path>${env.JAVA_HOME}${file.separator}bin${file.separator}jlink</jlink.executable.path>
     </properties>
 
     <dependencyManagement>
@@ -197,44 +198,31 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>com.igormaznitsa</groupId>
-                <artifactId>mvn-jlink-wrapper</artifactId>
-                <version>1.2.4</version>
-                <executions>
-                    <execution>
-                        <id>call-jlink</id>
-                        <goals>
-                            <goal>jlink</goal>
-                        </goals>
-                        <configuration>
-                            <output>${project.build.directory}${file.separator}preparedJDK</output>
-                            <addModules>
-                                <module>java.compiler</module>
-                                <module>java.base</module>
-                                <module>java.xml</module>
-                                <module>java.naming</module>
-                                <module>java.datatransfer</module>
-                                <module>java.net.http</module>
-                                <module>java.scripting</module>
-                                <module>jdk.unsupported</module>
-                                <module>jdk.httpserver</module>
-                            </addModules>
-                            <options>
-                                <option>--compress=2</option>
-                                <option>--no-header-files</option>
-                                <option>--no-man-pages</option>
-                                <option>--strip-debug</option>
-                                <option>--strip-native-commands</option>
-                            </options>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.5.0</version>
                 <executions>
+                    <execution>
+                        <id>call-jlink</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${jlink.executable.path}</executable>
+                            <arguments>
+                                <argument>--add-modules</argument>
+                                <argument>java.compiler,java.base,java.xml,java.naming,java.datatransfer,java.net.http,java.scripting,jdk.unsupported,jdk.httpserver</argument>
+                                <argument>--compress=2</argument>
+                                <argument>--no-header-files</argument>
+                                <argument>--no-man-pages</argument>
+                                <argument>--strip-debug</argument>
+                                <argument>--strip-native-commands</argument>
+                                <argument>--output</argument>
+                                <argument>${project.build.directory}${file.separator}preparedJDK</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>import-root-ca</id>
                         <phase>package</phase>
