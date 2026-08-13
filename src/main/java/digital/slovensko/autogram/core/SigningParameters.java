@@ -376,8 +376,10 @@ public class SigningParameters {
     }
 
     private void applyCadesSignatureReference(CAdESSignatureParameters parameters) {
-        parameters.setContentIdentifierPrefix(SIGNATURE_REFERENCE_ROLE_PREFIX);
-        parameters.setContentIdentifierSuffix(buildContentIdentifierSuffix());
+        if (signatureReference != null && !signatureReference.isBlank()) {
+            parameters.setContentIdentifierPrefix(SIGNATURE_REFERENCE_ROLE_PREFIX);
+            parameters.setContentIdentifierSuffix(buildContentIdentifierSuffix());
+        }
     }
 
     private List<String> buildClaimedSignerRoles() {
