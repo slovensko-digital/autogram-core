@@ -8,9 +8,11 @@ import eu.europa.esig.dss.diagnostic.DiagnosticData;
 import eu.europa.esig.dss.diagnostic.SignerDataWrapper;
 import eu.europa.esig.dss.enumerations.MimeTypeEnum;
 import eu.europa.esig.dss.enumerations.TimestampQualification;
+import eu.europa.esig.dss.enumerations.TimestampedObjectType;
 import eu.europa.esig.dss.model.DSSDocument;
 import eu.europa.esig.dss.simplereport.SimpleReport;
 import eu.europa.esig.dss.spi.signature.AdvancedSignature;
+import eu.europa.esig.dss.spi.x509.tsp.TimestampToken;
 import eu.europa.esig.dss.validation.DocumentValidator;
 import eu.europa.esig.dss.validation.reports.Reports;
 
@@ -192,11 +194,30 @@ public record ValidationResponseBody(String containerType, String signatureForm,
                             new String(Base64.getEncoder().encode(getEncodedCertificateOrNull(certificate))),
                             format.format(certificate.getNotAfter())
                     ),
-                    !signature.getSignatureTimestamps().isEmpty() && signature.getSignatureTimestamps().stream().allMatch((t -> t.isValid() && simpleReport.getTimestampQualification(t.getDSSIdAsString()).equals(TimestampQualification.QTSA))),
+                    hasQualifiedTimestamps(signature, simpleReport),
                     timestamps.isEmpty() ? null : timestamps,
                     diagnosticData.getSignerDocuments(signatureId).stream().map(SignerDataWrapper::getId).toList()
             );
         }
+    }
+
+    /**
+     * Signature timestamps and PAdES document timestamps that cover the signature count towards the signature's
+     * timestamp qualification. A document timestamp placed before the signature does not cover it.
+     */
+    private static boolean hasQualifiedTimestamps(AdvancedSignature signature, SimpleReport simpleReport) {
+        var relevantTimestamps = new ArrayList<TimestampToken>(signature.getSignatureTimestamps());
+        signature.getDocumentTimestamps().stream()
+                .filter((timestamp) -> coversSignature(timestamp, signature))
+                .forEach(relevantTimestamps::add);
+
+        return !relevantTimestamps.isEmpty() && relevantTimestamps.stream().allMatch((t) ->
+                t.isValid() && simpleReport.getTimestampQualification(t.getDSSIdAsString()).equals(TimestampQualification.QTSA));
+    }
+
+    static boolean coversSignature(TimestampToken timestamp, AdvancedSignature signature) {
+        return timestamp.getTimestampedReferences().stream().anyMatch((reference) ->
+                reference.getCategory() == TimestampedObjectType.SIGNATURE && signature.getId().equals(reference.getObjectId()));
     }
 
     record AgpMetadata(String agpReference, String agpInstance) {
