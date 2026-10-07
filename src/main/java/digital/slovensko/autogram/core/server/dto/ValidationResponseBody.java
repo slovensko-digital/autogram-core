@@ -22,6 +22,7 @@ import java.security.cert.X509Certificate;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public record ValidationResponseBody(String containerType, String signatureForm, List<Signature> signatures, List<SignedObject> signedObjects,
@@ -43,6 +44,7 @@ public record ValidationResponseBody(String containerType, String signatureForm,
         List<UnsignedObject> unsignedObjects = null;
         ASiCContainerExtractor extractor = null;
 
+        var isContainer = diagnosticData.getContainerType() != null;
         var signatureForm = simpleReport.getSignatureFormat(simpleReport.getFirstSignatureId()).getSignatureForm();
         String signatureFormString = null;
         if (signatureForm != null) {
@@ -57,11 +59,17 @@ public record ValidationResponseBody(String containerType, String signatureForm,
                     break;
                 }
                 case XAdES: {
-                    extractor = new ASiCWithXAdESContainerExtractor(document);
+                    if (isContainer)
+                        extractor = new ASiCWithXAdESContainerExtractor(document);
+                    else
+                        signedObjects = getSignedObjectsWithoutContainer(validator, diagnosticData);
                     break;
                 }
                 case CAdES: {
-                    extractor = new ASiCWithCAdESContainerExtractor(document);
+                    if (isContainer)
+                        extractor = new ASiCWithCAdESContainerExtractor(document);
+                    else
+                        signedObjects = getSignedObjectsWithoutContainer(validator, diagnosticData);
                     break;
                 }
                 default:
@@ -83,6 +91,21 @@ public record ValidationResponseBody(String containerType, String signatureForm,
         var fileFormat = diagnosticData.getContainerType() != null ? diagnosticData.getContainerType().name() : null;
 
         return new ValidationResponseBody(fileFormat, signatureFormString, signatures, signedObjects, unsignedObjects);
+    }
+
+    /**
+     * Enveloping/enveloped CAdES (e.g. a PDF wrapped in CMS) and XAdES signatures without an ASiC container carry
+     * the signed content inside the signature itself, so its mime type comes from the signed attributes.
+     */
+    private static List<SignedObject> getSignedObjectsWithoutContainer(DocumentValidator validator, DiagnosticData diagnosticData) {
+        var signedObjects = new LinkedHashMap<String, SignedObject>();
+        for (var signature : validator.getSignatures()) {
+            var mimeType = signature.getMimeType() != null ? signature.getMimeType() : MimeTypeEnum.BINARY.getMimeTypeString();
+            for (var signerDocument : diagnosticData.getSignerDocuments(signature.getId()))
+                signedObjects.putIfAbsent(signerDocument.getId(), new SignedObject(signerDocument.getId(), mimeType, signerDocument.getReferencedName()));
+        }
+
+        return signedObjects.isEmpty() ? null : new ArrayList<>(signedObjects.values());
     }
 
     private static List<SignedObject> getSignedObjects(List<DSSDocument> docs, List<SignerDataWrapper> signedObjects) {
