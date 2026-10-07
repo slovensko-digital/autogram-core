@@ -1,5 +1,9 @@
 package digital.slovensko.autogram.core.server.dto;
 
+import eu.europa.esig.dss.enumerations.MimeTypeEnum;
+import eu.europa.esig.dss.model.InMemoryDocument;
+import eu.europa.esig.dss.spi.validation.CommonCertificateVerifier;
+import eu.europa.esig.dss.validation.SignedDocumentValidator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -34,5 +38,24 @@ public class ValidationResponseBodyTests {
 
         Assertions.assertNull(metadata.agpReference());
         Assertions.assertNull(metadata.agpInstance());
+    }
+
+    @Test
+    void buildHandlesEnvelopingCadesWithoutContainer() throws Exception {
+        try (var stream = getClass().getResourceAsStream("/digital/slovensko/autogram/core/sample_pdf_cades_enveloping.p7m")) {
+            var document = new InMemoryDocument(stream.readAllBytes());
+            var validator = SignedDocumentValidator.fromDocument(document);
+            validator.setCertificateVerifier(new CommonCertificateVerifier());
+
+            var body = ValidationResponseBody.build(validator.validateDocument(), validator, document);
+
+            Assertions.assertNull(body.containerType());
+            Assertions.assertEquals("CAdES", body.signatureForm());
+            Assertions.assertEquals(1, body.signatures().size());
+            Assertions.assertEquals(1, body.signedObjects().size());
+            Assertions.assertEquals(body.signatures().get(0).signedObjectsIds(), List.of(body.signedObjects().get(0).id()));
+            Assertions.assertEquals(MimeTypeEnum.BINARY.getMimeTypeString(), body.signedObjects().get(0).mimeType());
+            Assertions.assertNull(body.unsignedObjects());
+        }
     }
 }
