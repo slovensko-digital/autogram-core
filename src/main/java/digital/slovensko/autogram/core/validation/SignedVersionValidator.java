@@ -23,10 +23,10 @@ import digital.slovensko.autogram.core.server.dto.CompareResponseBody.DocumentMa
 import digital.slovensko.autogram.core.server.dto.CompareResponseBody.DocumentRef;
 import digital.slovensko.autogram.core.server.dto.CompareResponseBody.SignatureRef;
 import digital.slovensko.autogram.core.util.DSSUtils;
+import digital.slovensko.autogram.core.util.NetworkClients;
 import eu.europa.esig.dss.enumerations.DigestAlgorithm;
 import eu.europa.esig.dss.model.DSSDocument;
 import eu.europa.esig.dss.spi.signature.AdvancedSignature;
-import eu.europa.esig.dss.spi.validation.CommonCertificateVerifier;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
 import eu.europa.esig.dss.xml.utils.XMLCanonicalizer;
 import org.w3c.dom.Node;
@@ -116,7 +116,7 @@ public abstract class SignedVersionValidator {
         if (validator == null)
             return null;
 
-        validator.setCertificateVerifier(new CommonCertificateVerifier());
+        validator.setCertificateVerifier(NetworkClients.certificateVerifier());
         return validator;
     }
 

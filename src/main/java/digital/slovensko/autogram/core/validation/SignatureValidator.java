@@ -2,6 +2,7 @@ package digital.slovensko.autogram.core.validation;
 
 import digital.slovensko.autogram.core.CustomSynchronizationStrategy;
 import digital.slovensko.autogram.core.SigningJob;
+import digital.slovensko.autogram.core.util.NetworkClients;
 import digital.slovensko.autogram.core.util.XMLUtils;
 import eu.europa.esig.dss.enumerations.SignatureLevel;
 import eu.europa.esig.dss.model.DSSDocument;
@@ -14,6 +15,7 @@ import eu.europa.esig.dss.simplereport.SimpleReport;
 import eu.europa.esig.dss.spi.tsl.TrustedListsCertificateSource;
 import eu.europa.esig.dss.spi.x509.CertificateSource;
 import eu.europa.esig.dss.spi.x509.KeyStoreCertificateSource;
+import eu.europa.esig.dss.spi.x509.aia.DefaultAIASource;
 import eu.europa.esig.dss.tsl.function.OfficialJournalSchemeInformationURI;
 import eu.europa.esig.dss.tsl.function.TLPredicateFactory;
 import eu.europa.esig.dss.tsl.job.TLValidationJob;
@@ -130,8 +132,9 @@ public class SignatureValidator {
 
         verifier = new CommonCertificateVerifier();
         verifier.setTrustedCertSources(trustedListCertificateSource);
-        verifier.setCrlSource(new OnlineCRLSource());
-        verifier.setOcspSource(new OnlineOCSPSource());
+        verifier.setAIASource(new DefaultAIASource(NetworkClients.dataLoader()));
+        verifier.setCrlSource(new OnlineCRLSource(NetworkClients.dataLoader()));
+        verifier.setOcspSource(new OnlineOCSPSource(NetworkClients.ocspDataLoader()));
 
         LOGGER.debug("Signature validator initialized at {}", formatter.format(new Date()));
     }
@@ -182,7 +185,7 @@ public class SignatureValidator {
         if (validator == null)
             return new ValidationReports(null, job);
 
-        validator.setCertificateVerifier(new CommonCertificateVerifier());
+        validator.setCertificateVerifier(NetworkClients.certificateVerifier());
         return new ValidationReports(validator.validateDocument(), job);
     }
 
@@ -191,7 +194,7 @@ public class SignatureValidator {
         if (validator == null)
             return null;
 
-        validator.setCertificateVerifier(new CommonCertificateVerifier());
+        validator.setCertificateVerifier(NetworkClients.certificateVerifier());
         var report = validator.validateDocument().getSimpleReport();
         if (report.getSignatureIdList().size() == 0)
             return null;

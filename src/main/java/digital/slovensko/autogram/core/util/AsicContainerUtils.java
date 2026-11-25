@@ -7,7 +7,6 @@ import eu.europa.esig.dss.asic.xades.extract.ASiCWithXAdESContainerExtractor;
 import eu.europa.esig.dss.enumerations.MimeType;
 import eu.europa.esig.dss.enumerations.MimeTypeEnum;
 import eu.europa.esig.dss.model.DSSDocument;
-import eu.europa.esig.dss.spi.validation.CommonCertificateVerifier;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -24,7 +23,7 @@ public class AsicContainerUtils {
             throw new OriginalDocumentNotFoundException("Súbor sa nepodarilo načítať");
         }
 
-        documentValidator.setCertificateVerifier(new CommonCertificateVerifier());
+        documentValidator.setCertificateVerifier(NetworkClients.certificateVerifier());
         var signatures = documentValidator.getSignatures();
         if (signatures.isEmpty())
             throw new OriginalDocumentNotFoundException("V kontajneri neboli nájdené žiadne podpisy");
