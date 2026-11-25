@@ -12,6 +12,7 @@ import digital.slovensko.autogram.core.eforms.xdc.XDCBuilder;
 import digital.slovensko.autogram.core.eforms.xdc.XDCValidator;
 import digital.slovensko.autogram.core.errors.*;
 import digital.slovensko.autogram.core.util.DSSUtils;
+import digital.slovensko.autogram.core.util.NetworkClients;
 import digital.slovensko.autogram.core.validation.SignatureValidator;
 import eu.europa.esig.dss.enumerations.SignatureForm;
 import eu.europa.esig.dss.enumerations.SignatureLevel;
@@ -20,7 +21,6 @@ import eu.europa.esig.dss.model.x509.CertificateToken;
 import eu.europa.esig.dss.pades.PAdESSignatureParameters;
 import eu.europa.esig.dss.spi.exception.DSSExternalResourceException;
 import eu.europa.esig.dss.spi.x509.tsp.TSPSource;
-import eu.europa.esig.dss.spi.validation.CommonCertificateVerifier;
 
 import static digital.slovensko.autogram.core.AutogramMimeType.*;
 
@@ -70,7 +70,7 @@ public class SigningJob {
         token = DSSUtils.parseCertificate(dataToSignStructure.signingCertificate());
 
         var signatureValue = new SignatureValue(token.getSignatureAlgorithm(), Base64.getDecoder().decode(signedData));
-        var commonCertificateVerifier = new CommonCertificateVerifier();
+        var commonCertificateVerifier = NetworkClients.certificateVerifier();
         var signatureParameters = parameters.getSignatureParameters();
         parameters.applySignatureReference(document, signatureParameters);
         var service = DSSUtils.getServiceForSignatureLevel(parameters.getSignatureType(), parameters.getContainer(), commonCertificateVerifier);
@@ -132,7 +132,7 @@ public class SigningJob {
     }
 
     public DataToSignStructure buildDataToSign(CertificateToken token) {
-        var commonCertificateVerifier = new CommonCertificateVerifier();
+        var commonCertificateVerifier = NetworkClients.certificateVerifier();
         var signatureParameters = parameters.getSignatureParameters();
         parameters.applySignatureReference(document, signatureParameters);
         var service = DSSUtils.getServiceForSignatureLevel(parameters.getSignatureType(), parameters.getContainer(), commonCertificateVerifier);

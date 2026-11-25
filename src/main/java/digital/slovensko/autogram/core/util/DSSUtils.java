@@ -77,6 +77,17 @@ public class DSSUtils {
     }
 
     public static SignedDocumentValidator createDocumentValidator(DSSDocument document) {
+        var validator = buildDocumentValidator(document);
+        if (validator != null)
+            // The signature policy URL comes from the submitted signature; keep its lookup off non-public and
+            // non-HTTP(S) targets. Set here so every validation path gets it (DSS otherwise falls back to an
+            // unrestricted native loader).
+            validator.setSignaturePolicyProvider(NetworkClients.signaturePolicyProvider());
+
+        return validator;
+    }
+
+    private static SignedDocumentValidator buildDocumentValidator(DSSDocument document) {
         if (new PDFDocumentValidatorFactory().isSupported(document))
             return new PDFDocumentValidatorFactory().create(document);
 
